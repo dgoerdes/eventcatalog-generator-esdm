@@ -1,0 +1,67 @@
+{
+  "name": "@dgoerdes/eventcatalog-generator-esdm",
+  "version": "0.1.0",
+  "description": "ESDM generator for EventCatalog",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "catalog:install": "npm install --prefix examples/catalog",
+    "catalog:clean": "rm -rf examples/catalog/domains examples/catalog/services examples/catalog/events examples/catalog/commands examples/catalog/queries examples/catalog/public/ai",
+    "catalog:generate": "npm run build && npm run generate --prefix examples/catalog",
+    "catalog:dev": "npm run dev --prefix examples/catalog",
+    "catalog:demo": "npm run catalog:install && npm run catalog:generate && npm run catalog:dev"
+  },
+  "keywords": [
+    "eventcatalog",
+    "esdm",
+    "event-sourced-domain-modeling",
+    "domain-driven-design",
+    "generator"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dgoerdes/eventcatalog-generator-esdm"
+  },
+  "dependencies": {
+    "@eventcatalog/sdk": "^2.18.4",
+    "chalk": "^4.1.2",
+    "glob": "^12.0.0",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0",
+    "minimist": "^1.2.8",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^20.16.1",
+    "prettier": "^3.3.3",
+    "tsup": "^8.1.0",
+    "typescript": "^5.5.3",
+    "vitest": "^2.0.2"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
