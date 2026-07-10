@@ -1,0 +1,26 @@
+# Environment files
+.env*
+!.env.example
+
+# Dependency directories
+node_modules/
+
+# Build output
+dist/
+
+# Logs
+*.log
+
+
+# IDE and OS files
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Claude
+.claude/settings.local.json
+
+# ESDM
+src/test/esdm
+
