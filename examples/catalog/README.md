@@ -2,11 +2,14 @@
 
 Runnable [EventCatalog Community Edition](https://www.eventcatalog.dev/) project that uses the local ESDM generator from this repository.
 
-The `models/library` directory contains the [ESDM first-model tutorial](https://www.esdm.io/getting-started/your-first-model/). Running `generate` produces:
+The `models/craven` directory contains a real-world Craven SaaS domain model. Running `generate` produces:
 
-- **Domain:** Library
-- **Service:** Cataloging (from bounded context `cataloging`)
-- **Messages:** `acquire` (command), `acquired` (event), `list-books` (query)
+- **Domain:** Craven
+- **Systems:** Tenant Management, Compliance Management (from bounded contexts)
+- **Services:** Aggregates, DCBs, read models, domain services, policies, event handlers, and external systems
+- **Messages:** Commands, events, and queries scoped to their consistency units
+
+The `models/library` directory is still available as a minimal tutorial fixture used by unit tests.
 
 ## Quick start
 
@@ -57,4 +60,4 @@ npm run build
 npm run catalog:generate
 ```
 
-Generated domains, services, and messages are gitignored here so the example always reflects the current plugin output.
+Generated domains, systems, services, and messages are gitignored here so the example always reflects the current plugin output.

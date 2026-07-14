@@ -6,9 +6,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /** @type {import('@eventcatalog/core/bin/eventcatalog.config').Config} */
 export default {
   cId: '00000000-0000-0000-0000-000000000001',
-  title: 'Library Catalog',
-  tagline: 'EventCatalog demo generated from an ESDM model',
-  organizationName: 'Library Demo',
+  title: 'Craven Catalog',
+  tagline: 'EventCatalog demo generated from the Craven ESDM model',
+  organizationName: 'Craven Demo',
   homepageLink: 'https://www.esdm.io/',
   editUrl: 'https://github.com/dgoerdes/eventcatalog-generator-esdm/edit/main',
   trailingSlash: false,
@@ -16,7 +16,7 @@ export default {
   logo: {
     alt: 'EventCatalog Logo',
     src: '/logo.png',
-    text: 'Library Demo',
+    text: 'Craven Demo',
   },
   docs: {
     sidebar: {
@@ -29,13 +29,13 @@ export default {
       {
         models: [
           {
-            path: path.join(__dirname, 'models', 'library'),
+            path: path.join(__dirname, 'models', 'craven'),
             version: '1.0.0',
           },
         ],
         domain: {
-          id: 'library',
-          name: 'Library',
+          id: 'craven',
+          name: 'Craven',
           version: '1.0.0',
         },
         debug: true,

@@ -26,7 +26,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "catalog:install": "npm install --prefix examples/catalog",
-    "catalog:clean": "rm -rf examples/catalog/domains examples/catalog/services examples/catalog/events examples/catalog/commands examples/catalog/queries examples/catalog/public/ai",
+    "catalog:clean": "rm -rf examples/catalog/domains examples/catalog/services examples/catalog/events examples/catalog/commands examples/catalog/queries examples/catalog/flows examples/catalog/public/ai",
     "catalog:generate": "npm run build && npm run generate --prefix examples/catalog",
     "catalog:dev": "npm run dev --prefix examples/catalog",
     "catalog:demo": "npm run catalog:install && npm run catalog:generate && npm run catalog:dev"

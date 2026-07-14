@@ -1,4 +1,4 @@
-export const ESDM_CORE_API_VERSION = 'schema.esdm.io/core/v1';
+export const ESDM_SCHEMA_FILE_NAME = 'schema.json';
 
 export const ESDM_KINDS = [
   'domain',
@@ -68,6 +68,7 @@ export interface EsdmSubdomain extends EsdmDocumentBase {
 export interface EsdmBoundedContext extends EsdmDocumentBase {
   kind: 'bounded-context';
   scope: EsdmScopeDomain;
+  ubiquitousLanguage?: Array<{ term: string; definition: string; avoid?: Array<{ term: string; reason: string }> }>;
 }
 
 export interface EsdmAggregate extends EsdmDocumentBase {
@@ -75,6 +76,14 @@ export interface EsdmAggregate extends EsdmDocumentBase {
   scope: EsdmScopeBoundedContext;
   identifiedBy?: Record<string, unknown>;
   state?: Record<string, unknown>;
+  invariants?: Array<{ name: string; rule: string }>;
+}
+
+export interface EsdmDynamicConsistencyBoundary extends EsdmDocumentBase {
+  kind: 'dynamic-consistency-boundary';
+  scope: EsdmScopeBoundedContext;
+  identifiedBy?: Array<Record<string, unknown>>;
+  consults?: Array<Record<string, unknown>>;
   invariants?: Array<{ name: string; rule: string }>;
 }
 
@@ -98,6 +107,9 @@ export interface EsdmQuery extends EsdmDocumentBase {
   scope: EsdmScopeBoundedContext;
   readModel: EsdmName;
   result?: Record<string, unknown>;
+  parameters?: Record<string, unknown>;
+  actors?: EsdmName[];
+  constraints?: Array<{ name: string; rule: string }>;
 }
 
 export interface EsdmReadModel extends EsdmDocumentBase {
@@ -105,12 +117,114 @@ export interface EsdmReadModel extends EsdmDocumentBase {
   scope: EsdmScopeBoundedContext;
   paradigm?: string;
   schema?: Record<string, unknown>;
-  projections?: Array<Record<string, unknown>>;
+  projections?: Array<{
+    boundedContext: EsdmName;
+    aggregate?: EsdmName;
+    event: EsdmName;
+    rule: string;
+  }>;
 }
 
 export interface EsdmExternalSystem extends EsdmDocumentBase {
   kind: 'external-system';
   scope: EsdmScopeDomain;
+  direction?: 'inbound' | 'outbound' | 'bidirectional';
+  category?: string;
+  capabilities?: string[];
+}
+
+export interface EsdmEventReference {
+  boundedContext: EsdmName;
+  aggregate?: EsdmName;
+  event: EsdmName;
+}
+
+export interface EsdmCommandReference {
+  boundedContext: EsdmName;
+  aggregate?: EsdmName;
+  command: EsdmName;
+}
+
+export interface EsdmPolicy extends EsdmDocumentBase {
+  kind: 'policy';
+  scope: EsdmScopeDomain;
+  deliveryGuarantee?: string;
+  idempotency?: Record<string, unknown>;
+  handles: EsdmEventReference[];
+  emits: EsdmCommandReference[];
+  constraints?: Array<{ name: string; rule: string }>;
+}
+
+export interface EsdmProcessManager extends EsdmDocumentBase {
+  kind: 'process-manager';
+  scope: EsdmScopeDomain;
+  deliveryGuarantee?: string;
+  idempotency?: Record<string, unknown>;
+  correlatedBy?: Record<string, unknown>;
+  state?: Record<string, unknown>;
+  invariants?: Array<{ name: string; rule: string }>;
+  constraints?: Array<{ name: string; rule: string }>;
+  startsWhen: EsdmEventReference[];
+  endsWhen?: Array<{ name: string; condition: string }>;
+  timers?: Array<Record<string, unknown>>;
+  reactions: Array<{
+    when: EsdmEventReference | { timer: EsdmName };
+    rule: string;
+    emits?: EsdmCommandReference[];
+    setTimers?: EsdmName[];
+    cancelTimers?: EsdmName[];
+  }>;
+}
+
+export interface EsdmEventHandler extends EsdmDocumentBase {
+  kind: 'event-handler';
+  scope: EsdmScopeDomain;
+  deliveryGuarantee?: string;
+  idempotency?: Record<string, unknown>;
+  handles: EsdmEventReference[];
+  constraints?: Array<{ name: string; rule: string }>;
+  sideEffects: Array<
+    | { type: 'external-call'; externalSystem: EsdmName; rule: string }
+    | { type: 'other'; rule: string }
+  >;
+}
+
+export interface EsdmContextMapping extends EsdmDocumentBase {
+  kind: 'context-mapping';
+  type:
+    | 'customer-supplier'
+    | 'conformist'
+    | 'anti-corruption-layer'
+    | 'open-host-service'
+    | 'published-language'
+    | 'shared-kernel'
+    | 'partnership'
+    | 'separate-ways';
+  customer?: EsdmMappingEndpoint;
+  supplier?: EsdmMappingEndpoint;
+  conformist?: EsdmMappingEndpoint;
+  upstream?: EsdmMappingEndpoint;
+  downstream?: EsdmMappingEndpoint;
+  host?: EsdmMappingEndpoint;
+  consumer?: EsdmMappingEndpoint;
+  publisher?: EsdmMappingEndpoint;
+  participants?: EsdmScopeBoundedContext[];
+}
+
+export type EsdmMappingEndpoint = EsdmScopeBoundedContext | { domain: EsdmName; externalSystem: EsdmName };
+
+export interface EsdmActor extends EsdmDocumentBase {
+  kind: 'actor';
+  scope: EsdmScopeBoundedContext;
+  type: 'human' | 'system';
+  responsibilities?: string[];
+  backedBy?: EsdmName[];
+}
+
+export interface EsdmDomainService extends EsdmDocumentBase {
+  kind: 'domain-service';
+  scope: EsdmScopeBoundedContext;
+  functions?: Array<{ name: string; description?: string; rule?: string }>;
 }
 
 export type EsdmDocument =
@@ -118,11 +232,18 @@ export type EsdmDocument =
   | EsdmSubdomain
   | EsdmBoundedContext
   | EsdmAggregate
+  | EsdmDynamicConsistencyBoundary
   | EsdmCommand
   | EsdmEvent
   | EsdmQuery
   | EsdmReadModel
   | EsdmExternalSystem
+  | EsdmPolicy
+  | EsdmProcessManager
+  | EsdmEventHandler
+  | EsdmContextMapping
+  | EsdmActor
+  | EsdmDomainService
   | EsdmDocumentBase;
 
 export interface ParsedEsdmModel {
@@ -132,11 +253,18 @@ export interface ParsedEsdmModel {
   subdomains: EsdmSubdomain[];
   boundedContexts: EsdmBoundedContext[];
   aggregates: EsdmAggregate[];
+  dynamicConsistencyBoundaries: EsdmDynamicConsistencyBoundary[];
   commands: EsdmCommand[];
   events: EsdmEvent[];
   queries: EsdmQuery[];
   readModels: EsdmReadModel[];
   externalSystems: EsdmExternalSystem[];
+  policies: EsdmPolicy[];
+  processManagers: EsdmProcessManager[];
+  eventHandlers: EsdmEventHandler[];
+  contextMappings: EsdmContextMapping[];
+  actors: EsdmActor[];
+  domainServices: EsdmDomainService[];
 }
 
 export interface ModelConfig {
@@ -155,7 +283,7 @@ export interface DomainConfig {
   owners?: string[];
 }
 
-export interface ServiceOverride {
+export interface SystemOverride {
   boundedContext: string;
   id?: string;
   name?: string;
@@ -164,10 +292,39 @@ export interface ServiceOverride {
   owners?: string[];
 }
 
+/** @deprecated Use systems[] for bounded-context overrides. Kept for backward compatibility. */
+export type ServiceOverride = SystemOverride;
+
+export interface ConsistencyUnitOverride {
+  boundedContext: string;
+  unit: string;
+  id?: string;
+  name?: string;
+  version?: string;
+  draft?: boolean;
+  owners?: string[];
+}
+
+export interface IntegrationOverride {
+  name: string;
+  id?: string;
+  displayName?: string;
+  version?: string;
+  draft?: boolean;
+  owners?: string[];
+}
+
 export interface GeneratorOptions {
   models: ModelConfig[];
   domain?: DomainConfig;
-  services?: ServiceOverride[];
+  /** Overrides for bounded-context → system mapping. */
+  systems?: SystemOverride[];
+  /** @deprecated Alias for systems[]. */
+  services?: SystemOverride[];
+  /** Overrides for consistency-unit → service mapping. */
+  units?: ConsistencyUnitOverride[];
+  /** Overrides for policies, event-handlers, process-managers, and external systems. */
+  integration?: IntegrationOverride[];
   debug?: boolean;
   saveSourceFiles?: boolean;
 }
@@ -176,10 +333,23 @@ export interface BoundedContextContext {
   domain: EsdmDomain;
   boundedContext: EsdmBoundedContext;
   aggregates: EsdmAggregate[];
+  dynamicConsistencyBoundaries: EsdmDynamicConsistencyBoundary[];
+  readModels: EsdmReadModel[];
+  domainServices: EsdmDomainService[];
+  actors: EsdmActor[];
   commands: EsdmCommand[];
   events: EsdmEvent[];
   queries: EsdmQuery[];
-  readModels: EsdmReadModel[];
+}
+
+export type ConsistencyUnitKind = 'aggregate' | 'dynamic-consistency-boundary' | 'read-model' | 'domain-service';
+
+export type IntegrationKind = 'policy' | 'process-manager' | 'event-handler' | 'external-system';
+
+export interface MappedBadge {
+  content: string;
+  backgroundColor: string;
+  textColor: string;
 }
 
 export interface MappedMessage {
@@ -203,9 +373,68 @@ export interface MappedService {
   sends: Array<{ id: string; version: string }>;
   receives: Array<{ id: string; version: string }>;
   messages: MappedMessage[];
+  sidebarBadge?: string;
+  badges?: MappedBadge[];
+  externalSystem?: boolean;
+  flows?: Array<{ id: string; version: string }>;
+  schema?: Record<string, unknown>;
   draft?: boolean;
   owners?: string[];
   sourceFiles: Array<{ fileName: string; content: string }>;
+  /** Where to place the service: inside a BC system or at domain root. */
+  placement: 'system' | 'domain';
+  boundedContext?: string;
+  esdmKind: ConsistencyUnitKind | IntegrationKind;
+}
+
+export interface MappedSystemRelationship {
+  id: string;
+  version: string;
+  label: string;
+}
+
+export interface MappedSystemActor {
+  id: string;
+  name: string;
+  label?: string;
+  direction?: 'inbound' | 'outbound';
+}
+
+export interface MappedSystem {
+  id: string;
+  name: string;
+  version: string;
+  summary?: string;
+  markdown: string;
+  boundedContext: string;
+  services: Array<{ id: string; version: string }>;
+  relationships: MappedSystemRelationship[];
+  actors: MappedSystemActor[];
+  draft?: boolean;
+  owners?: string[];
+}
+
+export interface MappedFlowStep {
+  id: string;
+  title: string;
+  summary?: string;
+  message?: { id: string; version: string; type: 'event' | 'command' | 'query' };
+  service?: { id: string; version: string };
+  next_step?: string | { id: string; label?: string };
+  next_steps?: Array<string | { id: string; label?: string }>;
+}
+
+export interface MappedFlow {
+  id: string;
+  name: string;
+  version: string;
+  summary?: string;
+  markdown: string;
+  steps: MappedFlowStep[];
+  draft?: boolean;
+  owners?: string[];
+  /** Service that owns this flow (process-manager). */
+  linkedServiceId?: string;
 }
 
 export interface MappedDomain {
@@ -215,5 +444,15 @@ export interface MappedDomain {
   markdown: string;
   draft?: boolean;
   owners?: string[];
+  systems: Array<{ id: string; version: string }>;
   services: Array<{ id: string; version: string }>;
+}
+
+export interface MappedModel {
+  esdmDomain: EsdmDomain;
+  domain: MappedDomain;
+  systems: MappedSystem[];
+  services: MappedService[];
+  flows: MappedFlow[];
+  messages: MappedMessage[];
 }

@@ -3,15 +3,24 @@ import path from 'node:path';
 import { glob } from 'glob';
 import yaml from 'js-yaml';
 import type {
+  EsdmActor,
   EsdmAggregate,
   EsdmBoundedContext,
   EsdmCommand,
+  EsdmContextMapping,
   EsdmDocument,
   EsdmDomain,
+  EsdmDomainService,
+  EsdmDynamicConsistencyBoundary,
   EsdmEvent,
+  EsdmEventHandler,
   EsdmExternalSystem,
+  EsdmMappingEndpoint,
+  EsdmPolicy,
+  EsdmProcessManager,
   EsdmQuery,
   EsdmReadModel,
+  EsdmScopeBoundedContext,
   EsdmSubdomain,
   ParsedEsdmModel,
 } from './types.js';
@@ -127,11 +136,18 @@ const indexDocuments = (documents: EsdmDocument[]): Omit<ParsedEsdmModel, 'sourc
   const subdomains: EsdmSubdomain[] = [];
   const boundedContexts: EsdmBoundedContext[] = [];
   const aggregates: EsdmAggregate[] = [];
+  const dynamicConsistencyBoundaries: EsdmDynamicConsistencyBoundary[] = [];
   const commands: EsdmCommand[] = [];
   const events: EsdmEvent[] = [];
   const queries: EsdmQuery[] = [];
   const readModels: EsdmReadModel[] = [];
   const externalSystems: EsdmExternalSystem[] = [];
+  const policies: EsdmPolicy[] = [];
+  const processManagers: EsdmProcessManager[] = [];
+  const eventHandlers: EsdmEventHandler[] = [];
+  const contextMappings: EsdmContextMapping[] = [];
+  const actors: EsdmActor[] = [];
+  const domainServices: EsdmDomainService[] = [];
 
   for (const document of documents) {
     switch (document.kind) {
@@ -146,6 +162,9 @@ const indexDocuments = (documents: EsdmDocument[]): Omit<ParsedEsdmModel, 'sourc
         break;
       case 'aggregate':
         aggregates.push(document as EsdmAggregate);
+        break;
+      case 'dynamic-consistency-boundary':
+        dynamicConsistencyBoundaries.push(document as EsdmDynamicConsistencyBoundary);
         break;
       case 'command':
         commands.push(document as EsdmCommand);
@@ -162,6 +181,24 @@ const indexDocuments = (documents: EsdmDocument[]): Omit<ParsedEsdmModel, 'sourc
       case 'external-system':
         externalSystems.push(document as EsdmExternalSystem);
         break;
+      case 'policy':
+        policies.push(document as EsdmPolicy);
+        break;
+      case 'process-manager':
+        processManagers.push(document as EsdmProcessManager);
+        break;
+      case 'event-handler':
+        eventHandlers.push(document as EsdmEventHandler);
+        break;
+      case 'context-mapping':
+        contextMappings.push(document as EsdmContextMapping);
+        break;
+      case 'actor':
+        actors.push(document as EsdmActor);
+        break;
+      case 'domain-service':
+        domainServices.push(document as EsdmDomainService);
+        break;
       default:
         break;
     }
@@ -172,11 +209,18 @@ const indexDocuments = (documents: EsdmDocument[]): Omit<ParsedEsdmModel, 'sourc
     subdomains,
     boundedContexts,
     aggregates,
+    dynamicConsistencyBoundaries,
     commands,
     events,
     queries,
     readModels,
     externalSystems,
+    policies,
+    processManagers,
+    eventHandlers,
+    contextMappings,
+    actors,
+    domainServices,
   };
 };
 
@@ -231,14 +275,53 @@ export const groupBoundedContexts = (
       aggregates: model.aggregates.filter(
         (item) => item.scope.domain === domain.name && item.scope.boundedContext === boundedContext.name
       ),
-      commands: model.commands.filter((item) => item.scope.domain === domain.name && item.scope.boundedContext === boundedContext.name),
-      events: model.events.filter((item) => item.scope.domain === domain.name && item.scope.boundedContext === boundedContext.name),
-      queries: model.queries.filter((item) => item.scope.domain === domain.name && item.scope.boundedContext === boundedContext.name),
+      dynamicConsistencyBoundaries: model.dynamicConsistencyBoundaries.filter(
+        (item) => item.scope.domain === domain.name && item.scope.boundedContext === boundedContext.name
+      ),
       readModels: model.readModels.filter(
+        (item) => item.scope.domain === domain.name && item.scope.boundedContext === boundedContext.name
+      ),
+      domainServices: model.domainServices.filter(
+        (item) => item.scope.domain === domain.name && item.scope.boundedContext === boundedContext.name
+      ),
+      actors: model.actors.filter(
+        (item) => item.scope.domain === domain.name && item.scope.boundedContext === boundedContext.name
+      ),
+      commands: model.commands.filter(
+        (item) => item.scope.domain === domain.name && item.scope.boundedContext === boundedContext.name
+      ),
+      events: model.events.filter(
+        (item) => item.scope.domain === domain.name && item.scope.boundedContext === boundedContext.name
+      ),
+      queries: model.queries.filter(
         (item) => item.scope.domain === domain.name && item.scope.boundedContext === boundedContext.name
       ),
     });
   }
 
   return contexts;
+};
+
+export const filterDomainScoped = <T extends { scope: { domain: string } }>(items: T[], domainName: string) =>
+  items.filter((item) => item.scope.domain === domainName);
+
+export const filterContextMappingsForDomain = (mappings: EsdmContextMapping[], domainName: string) => {
+  const belongsToDomain = (endpoint?: EsdmMappingEndpoint | EsdmScopeBoundedContext) =>
+    Boolean(endpoint && 'domain' in endpoint && endpoint.domain === domainName);
+
+  return mappings.filter((mapping) => {
+    const endpoints = [
+      mapping.customer,
+      mapping.supplier,
+      mapping.conformist,
+      mapping.upstream,
+      mapping.downstream,
+      mapping.host,
+      mapping.consumer,
+      mapping.publisher,
+      ...(mapping.participants ?? []),
+    ];
+
+    return endpoints.some((endpoint) => belongsToDomain(endpoint));
+  });
 };

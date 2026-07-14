@@ -1,6 +1,6 @@
 # ESDM Generator for EventCatalog
 
-Generate [EventCatalog](https://www.eventcatalog.dev/) domains, services, and messages from [ESDM](https://www.esdm.io/) (Event-Sourced Domain Modeling) YAML models.
+Generate [EventCatalog](https://www.eventcatalog.dev/) domains, systems, services, and messages from [ESDM](https://www.esdm.io/) (Event-Sourced Domain Modeling) YAML models.
 
 This is a one-way generator: ESDM `.esdm.yaml` files in, EventCatalog resources on disk out — the same model as the official OpenAPI and AsyncAPI plugins.
 
@@ -10,20 +10,26 @@ This is a one-way generator: ESDM `.esdm.yaml` files in, EventCatalog resources 
 
 ## Mapping
 
-ESDM's hierarchy is deeper than EventCatalog's flat Domain → Service → Messages model. This generator uses:
+ESDM's hierarchy maps to EventCatalog 4.0 systems and services:
 
-| ESDM concept | EventCatalog resource |
-|---|---|
-| `domain` | Domain (via config, validated against ESDM) |
-| `bounded-context` | Service |
-| `command` | Command |
-| `event` | Event |
-| `query` | Query |
-| `aggregate`, `read-model` | Documented in service markdown |
-| `external-system` | Planned (separate external service) |
-| `policy`, `process-manager`, `context-mapping` | Planned |
+| ESDM concept | EventCatalog resource | Notes |
+|---|---|---|
+| `domain` | Domain | Via config, validated against ESDM |
+| `bounded-context` | System | Grouped under the domain; owns consistency-unit services |
+| `aggregate` | Service | Badge: `Aggregate`; owns scoped commands/events |
+| `dynamic-consistency-boundary` | Service | Badge: `DCB`; owns DCB commands and emitted BC events |
+| `read-model` | Service | Badge: `Read Model`; owns queries and projected events |
+| `domain-service` | Service | Badge: `Domain Service`; stateless domain operations |
+| `command` / `event` / `query` | Message | Owned by the matching consistency-unit service |
+| `external-system` | External service | `externalSystem: true` at domain level |
+| `policy` | Integration service | Badge: `Policy`; domain-scoped `handles` / `emits` |
+| `event-handler` | Integration service | Badge: `Event Handler`; side effects in markdown |
+| `process-manager` | Integration service + Flow | Badge: `Process Manager`; flow documents reactions |
+| `context-mapping` | System `relationships` | BC-to-BC mappings; external endpoints noted in system markdown |
+| `actor` | System `actors` | Mapped from BC-scoped actors |
+| `metadata.labels` | Service `badges` | Tag-like passthrough |
 
-**Why bounded context → service?** It matches how teams usually own deployable units, aligns with the AsyncAPI plugin (one spec file → one service), and keeps aggregates as implementation detail inside the service rather than exploding the catalog with one service per aggregate.
+**Why bounded context → system?** EventCatalog systems describe software capabilities made of cooperating resources. ESDM bounded contexts are that layer — aggregates, DCBs, and read models are consistency units inside them, not deployable boundaries on their own.
 
 ## Installation
 
@@ -46,25 +52,26 @@ module.exports = {
       {
         models: [
           {
-            path: path.join(__dirname, 'models/library'),
+            path: path.join(__dirname, 'models/craven'),
             version: '1.0.0',
-          },
-          // Remote model
-          {
-            path: 'https://example.com/models/orders.esdm.yaml',
-            headers: { Authorization: 'Bearer ...' },
           },
         ],
         domain: {
-          id: 'library',
-          name: 'Library',
+          id: 'craven',
+          name: 'Craven',
           version: '1.0.0',
         },
-        services: [
+        systems: [
           {
-            boundedContext: 'cataloging',
-            id: 'cataloging-service',
-            name: 'Cataloging Service',
+            boundedContext: 'tenant-management',
+            name: 'Tenant Management',
+          },
+        ],
+        units: [
+          {
+            boundedContext: 'tenant-management',
+            unit: 'tenant',
+            name: 'Tenant Aggregate',
           },
         ],
         debug: true,
@@ -80,8 +87,11 @@ module.exports = {
 | Option | Description |
 |---|---|
 | `models` | Array of ESDM model sources. `path` can be a directory (scans `**/*.esdm.yaml`), a single file, or a URL. |
-| `domain` | EventCatalog domain to group generated services under. `id` should match the ESDM domain name when possible. |
-| `services` | Optional per–bounded-context overrides for service `id`, `name`, `version`, `owners`, `draft`. |
+| `domain` | EventCatalog domain to group generated systems under. `id` should match the ESDM domain name when possible. |
+| `systems` | Optional per–bounded-context overrides for system `id`, `name`, `version`, `owners`, `draft`. |
+| `services` | Deprecated alias for `systems`. |
+| `units` | Optional per–consistency-unit overrides (`boundedContext` + `unit` name). |
+| `integration` | Optional overrides for policies, event-handlers, process-managers, and external systems. |
 | `debug` | Verbose logging. Also enabled via `npm run generate -- debug`. |
 | `saveSourceFiles` | Attach source `.esdm.yaml` files to each generated service (default: `true`). |
 
@@ -97,14 +107,14 @@ npm run generate -- debug
 
 ## Try it locally (EventCatalog CE)
 
-This repo includes a runnable EventCatalog Community Edition project under `examples/catalog/`. It uses the local plugin via `file:../..` and the library ESDM model from the [ESDM tutorial](https://www.esdm.io/getting-started/your-first-model/).
+This repo includes a runnable EventCatalog Community Edition project under `examples/catalog/`. It uses the local plugin via `file:../..` and the Craven ESDM model as a real-world example.
 
 ```bash
 npm install
 npm run catalog:demo
 ```
 
-Open http://localhost:3000 — you should see the **Library** domain, **Cataloging** service, and the `acquire` / `acquired` / `list-books` messages.
+Open http://localhost:3000 — you should see the **Craven** domain, **Tenant Management** and **Compliance Management** systems, consistency-unit services, integration services, and external systems.
 
 **Requires Node.js >= 22.12.0** (current EventCatalog / Astro requirement).
 
@@ -123,15 +133,6 @@ The `src/test/fixtures/library` directory contains the [ESDM first-model tutoria
 ```bash
 ./src/test/esdm lint -d src/test/fixtures/library
 ```
-
-## Roadmap
-
-- [ ] External systems as dedicated services
-- [ ] Policies and process managers as cross-service `writesTo` / `readsFrom` links
-- [ ] Context mappings as service relationships or flows
-- [ ] Given-When-Then and Domain Storytelling extensions
-- [ ] Optional `esdm lint` integration during generate
-- [ ] `metadata.annotations` hooks for EventCatalog-specific overrides
 
 ## License
 
