@@ -1,0 +1,35 @@
+apiVersion: schema.esdm.io/core/v1
+kind: query
+name: list-ill-requests
+description: List in-flight ILL requests for the coordinator dashboard.
+scope:
+  domain: collection-network
+  boundedContext: inter-library-loan
+readModel: ill-pipeline
+parameters:
+  type: object
+  properties:
+    status:
+      type: string
+    lending-library-code:
+      type: string
+result:
+  type: array
+  items:
+    type: object
+    properties:
+      request-id:
+        type: string
+      patron-id:
+        type: string
+      isbn:
+        type: string
+      status:
+        type: string
+      due-back-at:
+        type: string
+        format: date-time
+constraints:
+  - name: default-active-only
+    rule: >
+      When status is omitted, exclude completed and canceled rows.

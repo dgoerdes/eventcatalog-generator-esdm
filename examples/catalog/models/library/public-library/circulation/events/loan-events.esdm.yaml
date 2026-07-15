@@ -1,0 +1,122 @@
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: checked-out
+description: A copy was lent to a patron; loan is now open.
+scope:
+  domain: public-library
+  boundedContext: circulation
+  aggregate: loan
+data:
+  type: object
+  required: [loan-id, patron-id, barcode, isbn, checked-out-at, due-at]
+  properties:
+    loan-id:
+      type: string
+    patron-id:
+      type: string
+    barcode:
+      type: string
+    isbn:
+      type: string
+    checked-out-at:
+      type: string
+      format: date-time
+    due-at:
+      type: string
+      format: date-time
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: checked-in
+description: A loan was closed and the copy is available for shelving.
+scope:
+  domain: public-library
+  boundedContext: circulation
+  aggregate: loan
+data:
+  type: object
+  required: [loan-id, barcode, isbn, checked-in-at]
+  properties:
+    loan-id:
+      type: string
+    barcode:
+      type: string
+    isbn:
+      type: string
+    checked-in-at:
+      type: string
+      format: date-time
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: loan-renewed
+description: An open loan received a new due date.
+scope:
+  domain: public-library
+  boundedContext: circulation
+  aggregate: loan
+data:
+  type: object
+  required: [loan-id, previous-due-at, new-due-at, renewal-count]
+  properties:
+    loan-id:
+      type: string
+    previous-due-at:
+      type: string
+      format: date-time
+    new-due-at:
+      type: string
+      format: date-time
+    renewal-count:
+      type: integer
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: loan-marked-overdue
+description: >
+  BC-scoped signal that a loan passed its due date while still open. Emitted by a
+  scheduled policy for reminder workflows.
+scope:
+  domain: public-library
+  boundedContext: circulation
+data:
+  type: object
+  required: [loan-id, patron-id, due-at, marked-at]
+  properties:
+    loan-id:
+      type: string
+    patron-id:
+      type: string
+    due-at:
+      type: string
+      format: date-time
+    marked-at:
+      type: string
+      format: date-time
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: hold-ready-for-pickup
+description: >
+  BC-scoped signal from inter-library-loan or internal hold fulfillment that a title
+  is waiting at the desk for a patron.
+scope:
+  domain: public-library
+  boundedContext: circulation
+data:
+  type: object
+  required: [patron-id, isbn, pickup-by]
+  properties:
+    patron-id:
+      type: string
+    isbn:
+      type: string
+    barcode:
+      type: string
+    pickup-by:
+      type: string
+      format: date-time

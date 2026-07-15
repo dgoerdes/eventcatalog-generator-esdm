@@ -1,0 +1,78 @@
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: create-order
+description: Submit a new purchase order to a vendor.
+scope:
+  domain: collection-network
+  boundedContext: acquisitions
+  aggregate: purchase-order
+actors:
+  - acquisitions-librarian
+data:
+  type: object
+  required: [order-id, vendor-id, lines]
+  properties:
+    order-id:
+      type: string
+      format: uuid
+    vendor-id:
+      type: string
+    expected-delivery-at:
+      type: string
+      format: date
+    lines:
+      type: array
+      minItems: 1
+      items:
+        type: object
+        required: [line-id, isbn, quantity, unit-price-cents]
+        properties:
+          line-id:
+            type: string
+          isbn:
+            type: string
+          quantity:
+            type: integer
+          unit-price-cents:
+            type: integer
+publishes:
+  - order-created
+constraints:
+  - name: vendor-active
+    rule: vendor-id must reference an active vendor contract.
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: receive-shipment
+description: Record received copies against order lines and close lines when complete.
+scope:
+  domain: collection-network
+  boundedContext: acquisitions
+  aggregate: purchase-order
+actors:
+  - acquisitions-librarian
+data:
+  type: object
+  required: [order-id, receipts]
+  properties:
+    order-id:
+      type: string
+    receipts:
+      type: array
+      minItems: 1
+      items:
+        type: object
+        required: [line-id, quantity-received, barcodes]
+        properties:
+          line-id:
+            type: string
+          quantity-received:
+            type: integer
+            minimum: 1
+          barcodes:
+            type: array
+            items:
+              type: string
+publishes:
+  - shipment-received

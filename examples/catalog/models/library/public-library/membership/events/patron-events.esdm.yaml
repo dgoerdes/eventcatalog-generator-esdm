@@ -1,0 +1,68 @@
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: patron-enrolled
+description: >
+  A new patron was registered and issued a card. BC-scoped because it originates from the
+  patron-enrollment DCB rather than the patron aggregate stream.
+scope:
+  domain: public-library
+  boundedContext: membership
+data:
+  type: object
+  required: [patron-id, display-name, email, card-number, tier, enrolled-at]
+  properties:
+    patron-id:
+      type: string
+    display-name:
+      type: string
+    email:
+      type: string
+    card-number:
+      type: string
+    tier:
+      type: string
+    max-open-loans:
+      type: integer
+    enrolled-at:
+      type: string
+      format: date-time
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: patron-suspended
+description: Patron borrowing privileges were suspended.
+scope:
+  domain: public-library
+  boundedContext: membership
+  aggregate: patron
+data:
+  type: object
+  required: [patron-id, reason, suspended-at]
+  properties:
+    patron-id:
+      type: string
+    reason:
+      type: string
+    suspended-at:
+      type: string
+      format: date-time
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: patron-reactivated
+description: A suspended patron was returned to active status.
+scope:
+  domain: public-library
+  boundedContext: membership
+  aggregate: patron
+data:
+  type: object
+  required: [patron-id, reactivated-at]
+  properties:
+    patron-id:
+      type: string
+    reactivated-at:
+      type: string
+      format: date-time

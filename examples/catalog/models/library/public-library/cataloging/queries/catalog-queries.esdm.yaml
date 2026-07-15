@@ -1,0 +1,78 @@
+apiVersion: schema.esdm.io/core/v1
+kind: query
+name: search-catalog
+description: Full-text and filter search over active catalog titles.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+readModel: catalog
+actors:
+  - patron
+  - cataloger
+parameters:
+  type: object
+  properties:
+    q:
+      type: string
+      description: Free-text query across title and author names.
+    subject:
+      type: string
+    available-only:
+      type: boolean
+      default: false
+result:
+  type: array
+  items:
+    type: object
+    properties:
+      isbn:
+        type: string
+      title:
+        type: string
+      authors:
+        type: array
+        items:
+          type: string
+      available-copies:
+        type: integer
+constraints:
+  - name: active-titles-only
+    rule: Rows with status withdrawn are excluded unless the actor holds cataloger role.
+  - name: default-sort
+    rule: Results sort by title ascending when no relevance score applies.
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: query
+name: get-book-details
+description: Fetch one catalog row including copy availability for a known ISBN.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+readModel: catalog
+actors:
+  - patron
+  - cataloger
+parameters:
+  type: object
+  required: [isbn]
+  properties:
+    isbn:
+      type: string
+result:
+  type: object
+  properties:
+    isbn:
+      type: string
+    title:
+      type: string
+    authors:
+      type: array
+      items:
+        type: string
+    publishYear:
+      type: integer
+    available-copies:
+      type: integer
+    status:
+      type: string

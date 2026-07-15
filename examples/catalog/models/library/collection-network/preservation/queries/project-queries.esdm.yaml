@@ -1,0 +1,29 @@
+apiVersion: schema.esdm.io/core/v1
+kind: query
+name: list-active-projects
+description: List conservation projects that are planned or in progress.
+scope:
+  domain: collection-network
+  boundedContext: preservation
+readModel: active-projects
+parameters:
+  type: object
+  properties:
+    condition-grade:
+      type: string
+result:
+  type: array
+  items:
+    type: object
+    properties:
+      project-id:
+        type: string
+      title:
+        type: string
+      status:
+        type: string
+      condition-grade:
+        type: string
+constraints:
+  - name: active-status-only
+    rule: Include only rows where status is planned or in-progress.

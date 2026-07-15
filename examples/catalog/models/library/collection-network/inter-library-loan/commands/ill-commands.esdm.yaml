@@ -1,0 +1,73 @@
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: place-ill-request
+description: Request a title from a partner library for a local patron.
+scope:
+  domain: collection-network
+  boundedContext: inter-library-loan
+  aggregate: ill-request
+data:
+  type: object
+  required: [request-id, patron-id, isbn, lending-library-code]
+  properties:
+    request-id:
+      type: string
+      format: uuid
+    patron-id:
+      type: string
+      format: uuid
+    isbn:
+      type: string
+    lending-library-code:
+      type: string
+publishes:
+  - ill-requested
+constraints:
+  - name: patron-local
+    rule: patron-id must belong to the home library membership registry.
+  - name: not-held-locally
+    rule: catalog reports zero available copies for this isbn at the home branch.
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: record-shipment
+description: Partner library shipped the item; capture tracking and due-back date.
+scope:
+  domain: collection-network
+  boundedContext: inter-library-loan
+  aggregate: ill-request
+data:
+  type: object
+  required: [request-id, tracking-number, due-back-at]
+  properties:
+    request-id:
+      type: string
+    tracking-number:
+      type: string
+    due-back-at:
+      type: string
+      format: date-time
+publishes:
+  - item-shipped
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: confirm-return-to-lender
+description: Item was shipped back to the lending library; close the request.
+scope:
+  domain: collection-network
+  boundedContext: inter-library-loan
+  aggregate: ill-request
+data:
+  type: object
+  required: [request-id, returned-at]
+  properties:
+    request-id:
+      type: string
+    returned-at:
+      type: string
+      format: date-time
+publishes:
+  - ill-completed

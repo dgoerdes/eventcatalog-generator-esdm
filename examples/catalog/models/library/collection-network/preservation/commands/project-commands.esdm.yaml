@@ -1,0 +1,57 @@
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: start-project
+description: Open a conservation project for one or more items.
+scope:
+  domain: collection-network
+  boundedContext: preservation
+  aggregate: conservation-project
+actors:
+  - conservator
+data:
+  type: object
+  required: [project-id, title, condition-grade, item-barcodes]
+  properties:
+    project-id:
+      type: string
+      format: uuid
+    title:
+      type: string
+    condition-grade:
+      type: string
+      enum: [excellent, good, fair, poor]
+    item-barcodes:
+      type: array
+      minItems: 1
+      items:
+        type: string
+    target-completion-at:
+      type: string
+      format: date
+publishes:
+  - project-started
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: complete-project
+description: Mark conservation work finished and release items back to circulation.
+scope:
+  domain: collection-network
+  boundedContext: preservation
+  aggregate: conservation-project
+actors:
+  - conservator
+data:
+  type: object
+  required: [project-id, completion-notes]
+  properties:
+    project-id:
+      type: string
+    completion-notes:
+      type: string
+publishes:
+  - project-completed
+constraints:
+  - name: must-be-in-progress
+    rule: Project status must be in-progress.

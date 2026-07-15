@@ -296,7 +296,8 @@ const mapAggregateService = (
 
   const markdown = bodyMarkdown(
     `\nGenerated from ESDM aggregate \`${aggregate.name}\` in bounded context \`${context.boundedContext.name}\`.\n`,
-    renderRules('Invariants', aggregate.invariants)
+    renderRules('Invariants', aggregate.invariants),
+    serviceDiagramMarkdown()
   );
 
   return {
@@ -343,7 +344,8 @@ const mapDcbService = (
 
   const markdown = bodyMarkdown(
     `\nGenerated from ESDM dynamic consistency boundary \`${dcb.name}\` in bounded context \`${context.boundedContext.name}\`.\n`,
-    renderRules('Invariants', dcb.invariants)
+    renderRules('Invariants', dcb.invariants),
+    serviceDiagramMarkdown()
   );
 
   return {
@@ -390,7 +392,8 @@ const mapReadModelService = (
   const markdown = bodyMarkdown(
     readModel.paradigm ? `\n**Paradigm:** ${readModel.paradigm}\n` : '',
     `\nGenerated from ESDM read model \`${readModel.name}\` in bounded context \`${context.boundedContext.name}\`.\n`,
-    projectionLines.length ? `\n## Projections\n\n${projectionLines.join('\n')}\n` : ''
+    projectionLines.length ? `\n## Projections\n\n${projectionLines.join('\n')}\n` : '',
+    serviceDiagramMarkdown()
   );
 
   return {
@@ -428,7 +431,8 @@ const mapDomainServiceResource = (
 
   const markdown = bodyMarkdown(
     `\nGenerated from ESDM domain service \`${domainService.name}\` in bounded context \`${context.boundedContext.name}\`.\n`,
-    functionLines.length ? `\n## Functions\n\n${functionLines.join('\n')}\n` : ''
+    functionLines.length ? `\n## Functions\n\n${functionLines.join('\n')}\n` : '',
+    serviceDiagramMarkdown()
   );
 
   return {
@@ -581,7 +585,8 @@ export const mapBoundedContextSystem = (
   version: string,
   services: MappedService[],
   relationships: MappedSystemRelationship[],
-  systemOverride?: SystemOverride
+  systemOverride?: SystemOverride,
+  externalNotes?: string[]
 ): MappedSystem => {
   const systemId = resolveSystemId(context.boundedContext.name, systemOverride);
   const systemName = systemOverride?.name ?? toTitle(context.boundedContext.name);
@@ -592,7 +597,9 @@ export const mapBoundedContextSystem = (
 
   const markdown = bodyMarkdown(
     `\nGenerated from ESDM bounded context \`${context.boundedContext.name}\` in domain \`${context.domain.name}\`.\n`,
-    ubLines.length ? `\n## Ubiquitous Language\n\n${ubLines.join('\n\n')}\n` : ''
+    ubLines.length ? `\n## Ubiquitous Language\n\n${ubLines.join('\n\n')}\n` : '',
+    externalNotes?.length ? `\n## External Integrations\n\n${externalNotes.join('\n')}\n` : '',
+    systemDiagramMarkdown()
   );
 
   return {
@@ -641,7 +648,8 @@ export const mapPolicyService = (policy: EsdmPolicy, version: string, override?:
     policy.deliveryGuarantee ? `\n**Delivery guarantee:** ${policy.deliveryGuarantee}\n` : '',
     handleLines.length ? `\n## Handles\n\n${handleLines.join('\n')}\n` : '',
     emitLines.length ? `\n## Emits\n\n${emitLines.join('\n')}\n` : '',
-    renderRules('Constraints', policy.constraints)
+    renderRules('Constraints', policy.constraints),
+    serviceDiagramMarkdown()
   );
 
   return {
@@ -694,7 +702,8 @@ export const mapEventHandlerService = (
     `\nGenerated from ESDM event handler \`${eventHandler.name}\`.\n`,
     eventHandler.deliveryGuarantee ? `\n**Delivery guarantee:** ${eventHandler.deliveryGuarantee}\n` : '',
     sideEffectLines.length ? `\n## Side Effects\n\n${sideEffectLines.join('\n')}\n` : '',
-    renderRules('Constraints', eventHandler.constraints)
+    renderRules('Constraints', eventHandler.constraints),
+    serviceDiagramMarkdown()
   );
 
   return {
@@ -788,7 +797,8 @@ export const mapProcessManagerService = (
     markdown: bodyMarkdown(
       `\nGenerated from ESDM process manager \`${processManager.name}\`.\n`,
       renderRules('Invariants', processManager.invariants),
-      renderRules('Constraints', processManager.constraints)
+      renderRules('Constraints', processManager.constraints),
+      serviceDiagramMarkdown()
     ),
     schema: processManager.state,
     sends,
@@ -821,7 +831,8 @@ export const mapExternalSystemService = (
     `\nGenerated from ESDM external system \`${externalSystem.name}\`.\n`,
     externalSystem.direction ? `\n**Direction:** ${externalSystem.direction}\n` : '',
     externalSystem.category ? `\n**Category:** ${externalSystem.category}\n` : '',
-    capabilityLines.length ? `\n## Capabilities\n\n${capabilityLines.join('\n')}\n` : ''
+    capabilityLines.length ? `\n## Capabilities\n\n${capabilityLines.join('\n')}\n` : '',
+    serviceDiagramMarkdown()
   );
 
   return {
@@ -842,6 +853,16 @@ export const mapExternalSystemService = (
     sourceFiles: [],
   };
 };
+
+const serviceDiagramMarkdown = () =>
+  bodyMarkdown(
+    `\n## Message Flow Map\n\nMessages this service sends and receives, and how they connect in the catalog.\n\n<NodeGraph />\n`
+  );
+
+const systemDiagramMarkdown = () =>
+  bodyMarkdown(
+    `\n## Resource Diagram\n\nThe services and messages that make up this system.\n\n<NodeGraph />\n`
+  );
 
 const domainDiagramMarkdown = () =>
   bodyMarkdown(
@@ -925,15 +946,16 @@ export const mapEsdmModel = (
     const relationships = relationshipsByBc.get(context.boundedContext.name) ?? [];
     const externalNotes = externalMappingNotes.get(context.boundedContext.name);
 
-    let system = mapBoundedContextSystem(context, version, services, relationships, systemOverride);
-    if (externalNotes?.length) {
-      system = {
-        ...system,
-        markdown: `${system.markdown}\n## External Integrations\n\n${externalNotes.join('\n')}\n`,
-      };
-    }
-
-    systems.push(system);
+    systems.push(
+      mapBoundedContextSystem(
+        context,
+        version,
+        services,
+        relationships,
+        systemOverride,
+        externalNotes
+      )
+    );
     systemServices.push(...services);
   }
 

@@ -1,0 +1,39 @@
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: flag-overdue-return
+description: >
+  Staff escalation when an ILL item is still with the patron past due-back-at.
+scope:
+  domain: collection-network
+  boundedContext: inter-library-loan
+  aggregate: ill-request
+data:
+  type: object
+  required: [request-id]
+  properties:
+    request-id:
+      type: string
+publishes:
+  - ill-return-overdue
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: ill-return-overdue
+description: >
+  BC-scoped signal that a patron has not returned an ILL item by the due-back date.
+scope:
+  domain: collection-network
+  boundedContext: inter-library-loan
+  aggregate: ill-request
+data:
+  type: object
+  required: [request-id, patron-id, due-back-at]
+  properties:
+    request-id:
+      type: string
+    patron-id:
+      type: string
+    due-back-at:
+      type: string
+      format: date-time

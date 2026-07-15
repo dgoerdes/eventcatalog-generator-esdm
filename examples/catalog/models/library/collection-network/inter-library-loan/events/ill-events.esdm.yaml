@@ -1,0 +1,97 @@
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: ill-requested
+description: A new inter-library loan request was placed with a partner.
+scope:
+  domain: collection-network
+  boundedContext: inter-library-loan
+  aggregate: ill-request
+data:
+  type: object
+  required: [request-id, patron-id, isbn, lending-library-code, requested-at]
+  properties:
+    request-id:
+      type: string
+    patron-id:
+      type: string
+    isbn:
+      type: string
+    lending-library-code:
+      type: string
+    requested-at:
+      type: string
+      format: date-time
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: item-shipped
+description: The lending library shipped the item to the home branch.
+scope:
+  domain: collection-network
+  boundedContext: inter-library-loan
+  aggregate: ill-request
+data:
+  type: object
+  required: [request-id, tracking-number, due-back-at, shipped-at]
+  properties:
+    request-id:
+      type: string
+    patron-id:
+      type: string
+    isbn:
+      type: string
+    barcode:
+      type: string
+    tracking-number:
+      type: string
+    due-back-at:
+      type: string
+      format: date-time
+    shipped-at:
+      type: string
+      format: date-time
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: ill-completed
+description: The item was returned to the lending library and the request is closed.
+scope:
+  domain: collection-network
+  boundedContext: inter-library-loan
+  aggregate: ill-request
+data:
+  type: object
+  required: [request-id, completed-at]
+  properties:
+    request-id:
+      type: string
+    completed-at:
+      type: string
+      format: date-time
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: ill-pickup-ready
+description: >
+  BC-scoped signal that a shipped ILL item is on the hold shelf and ready for patron pickup.
+scope:
+  domain: collection-network
+  boundedContext: inter-library-loan
+data:
+  type: object
+  required: [request-id, patron-id, isbn, pickup-by]
+  properties:
+    request-id:
+      type: string
+    patron-id:
+      type: string
+    isbn:
+      type: string
+    barcode:
+      type: string
+    pickup-by:
+      type: string
+      format: date-time

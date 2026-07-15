@@ -1,0 +1,22 @@
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: loan-reminder-due
+description: >
+  BC-scoped signal that a loan is three days from due and the patron should be notified.
+  Emitted by the loan-reminder process manager when its timer fires.
+scope:
+  domain: public-library
+  boundedContext: circulation
+data:
+  type: object
+  required: [loan-id, patron-id, due-at]
+  properties:
+    loan-id:
+      type: string
+    patron-id:
+      type: string
+    isbn:
+      type: string
+    due-at:
+      type: string
+      format: date-time

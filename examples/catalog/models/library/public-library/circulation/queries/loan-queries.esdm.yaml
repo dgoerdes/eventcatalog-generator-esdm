@@ -1,0 +1,38 @@
+apiVersion: schema.esdm.io/core/v1
+kind: query
+name: list-open-loans
+description: List open and overdue loans, optionally filtered by patron or desk.
+scope:
+  domain: public-library
+  boundedContext: circulation
+readModel: open-loans
+actors:
+  - circulation-clerk
+parameters:
+  type: object
+  properties:
+    patron-id:
+      type: string
+      format: uuid
+    overdue-only:
+      type: boolean
+      default: false
+result:
+  type: array
+  items:
+    type: object
+    properties:
+      loan-id:
+        type: string
+      patronName:
+        type: string
+      title:
+        type: string
+      due-at:
+        type: string
+        format: date-time
+      status:
+        type: string
+constraints:
+  - name: sort-by-due-date
+    rule: Results sort by due-at ascending so the most urgent loans appear first.

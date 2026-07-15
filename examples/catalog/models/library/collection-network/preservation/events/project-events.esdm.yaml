@@ -1,0 +1,48 @@
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: project-started
+description: A conservation project was opened for treatment.
+scope:
+  domain: collection-network
+  boundedContext: preservation
+  aggregate: conservation-project
+data:
+  type: object
+  required: [project-id, title, condition-grade, item-barcodes, opened-at]
+  properties:
+    project-id:
+      type: string
+    title:
+      type: string
+    condition-grade:
+      type: string
+    item-barcodes:
+      type: array
+      items:
+        type: string
+    opened-at:
+      type: string
+      format: date-time
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: project-completed
+description: Conservation work was signed off and items may return to the stacks.
+scope:
+  domain: collection-network
+  boundedContext: preservation
+  aggregate: conservation-project
+data:
+  type: object
+  required: [project-id, completed-at]
+  properties:
+    project-id:
+      type: string
+    item-barcodes:
+      type: array
+      items:
+        type: string
+    completed-at:
+      type: string
+      format: date-time

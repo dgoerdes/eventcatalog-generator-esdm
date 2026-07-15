@@ -1,0 +1,89 @@
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: check-out
+description: Lend one available copy to an eligible patron.
+scope:
+  domain: public-library
+  boundedContext: circulation
+  aggregate: loan
+actors:
+  - circulation-clerk
+data:
+  type: object
+  required: [loan-id, patron-id, barcode]
+  properties:
+    loan-id:
+      type: string
+      format: uuid
+    patron-id:
+      type: string
+      format: uuid
+    barcode:
+      type: string
+    loanPeriodDays:
+      type: integer
+      minimum: 1
+      default: 21
+publishes:
+  - checked-out
+constraints:
+  - name: copy-available
+    rule: cataloging reports copy status available for this barcode.
+  - name: patron-eligible
+    rule: membership reports patron active and below max open loans.
+  - name: no-open-loan-on-copy
+    rule: No open loan exists for this barcode.
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: check-in
+description: Close an open loan when the copy is returned.
+scope:
+  domain: public-library
+  boundedContext: circulation
+  aggregate: loan
+actors:
+  - circulation-clerk
+data:
+  type: object
+  required: [loan-id]
+  properties:
+    loan-id:
+      type: string
+      format: uuid
+publishes:
+  - checked-in
+constraints:
+  - name: loan-must-be-open
+    rule: Target loan status is open or overdue.
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: renew-loan
+description: Extend the due date for an open loan when policy allows.
+scope:
+  domain: public-library
+  boundedContext: circulation
+  aggregate: loan
+actors:
+  - circulation-clerk
+data:
+  type: object
+  required: [loan-id, extensionDays]
+  properties:
+    loan-id:
+      type: string
+      format: uuid
+    extensionDays:
+      type: integer
+      minimum: 1
+      default: 21
+publishes:
+  - loan-renewed
+constraints:
+  - name: renewal-limit
+    rule: renewal-count is below patron tier maximum (consulted from membership).
+  - name: no-waiting-holds
+    rule: No active hold queue exists for this isbn with earlier priority.

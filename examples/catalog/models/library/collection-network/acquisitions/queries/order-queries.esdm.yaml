@@ -1,0 +1,35 @@
+apiVersion: schema.esdm.io/core/v1
+kind: query
+name: list-pending-orders
+description: List purchase orders awaiting delivery or partial receipt.
+scope:
+  domain: collection-network
+  boundedContext: acquisitions
+readModel: pending-orders
+actors:
+  - acquisitions-librarian
+parameters:
+  type: object
+  properties:
+    vendor-id:
+      type: string
+    overdue-only:
+      type: boolean
+      default: false
+result:
+  type: array
+  items:
+    type: object
+    properties:
+      order-id:
+        type: string
+      vendor-id:
+        type: string
+      status:
+        type: string
+      open-line-count:
+        type: integer
+constraints:
+  - name: overdue-filter
+    rule: >
+      When overdue-only is true, include only rows whose expected-delivery-at is before today.

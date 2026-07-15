@@ -102,6 +102,24 @@ describe('mapper', () => {
     );
   });
 
+  it('includes message flow map on every service page', async () => {
+    const model = await parseEsdmModel(libraryFixture);
+    const mapped = mapEsdmModel(model, { id: 'public-library', name: 'Public Library', version: '1.0.0' });
+
+    expect(mapped.services.length).toBeGreaterThan(0);
+    expect(mapped.services.every((service) => service.markdown.includes('## Message Flow Map'))).toBe(true);
+    expect(mapped.services.every((service) => service.markdown.includes('<NodeGraph />'))).toBe(true);
+  });
+
+  it('includes resource diagram on every system page', async () => {
+    const model = await parseEsdmModel(libraryFixture);
+    const mapped = mapEsdmModel(model, { id: 'public-library', name: 'Public Library', version: '1.0.0' });
+
+    expect(mapped.systems.length).toBeGreaterThan(0);
+    expect(mapped.systems.every((system) => system.markdown.includes('## Resource Diagram'))).toBe(true);
+    expect(mapped.systems.every((system) => system.markdown.includes('<NodeGraph />'))).toBe(true);
+  });
+
   it('includes system and resource diagrams in domain markdown', async () => {
     const model = await parseEsdmModel(libraryFixture);
     const mapped = mapEsdmModel(model, { id: 'public-library', name: 'Public Library', version: '1.0.0' });

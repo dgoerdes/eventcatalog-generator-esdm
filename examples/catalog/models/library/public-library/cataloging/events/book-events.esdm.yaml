@@ -1,0 +1,102 @@
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: book-acquired
+description: A new title was cataloged and is available for copy attachment.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+  aggregate: book
+data:
+  type: object
+  required: [isbn, title, authors, acquired-at]
+  properties:
+    isbn:
+      type: string
+    title:
+      type: string
+    authors:
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          author-id:
+            type: string
+    publishYear:
+      type: integer
+    acquired-at:
+      type: string
+      format: date-time
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: book-withdrawn
+description: A title was withdrawn from the active catalog.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+  aggregate: book
+data:
+  type: object
+  required: [isbn, reason, withdrawn-at]
+  properties:
+    isbn:
+      type: string
+    reason:
+      type: string
+    withdrawn-at:
+      type: string
+      format: date-time
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: copy-added
+description: A physical copy was registered under a title.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+  aggregate: book-copy
+data:
+  type: object
+  required: [barcode, isbn, status, added-at]
+  properties:
+    barcode:
+      type: string
+    isbn:
+      type: string
+    status:
+      type: string
+      enum: [available]
+    location:
+      type: string
+    added-at:
+      type: string
+      format: date-time
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: copy-status-changed
+description: A copy moved between shelf states (e.g. available ↔ on-loan).
+scope:
+  domain: public-library
+  boundedContext: cataloging
+  aggregate: book-copy
+data:
+  type: object
+  required: [barcode, isbn, previous-status, new-status, changed-at]
+  properties:
+    barcode:
+      type: string
+    isbn:
+      type: string
+    previous-status:
+      type: string
+    new-status:
+      type: string
+    changed-at:
+      type: string
+      format: date-time

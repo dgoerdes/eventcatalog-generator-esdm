@@ -1,0 +1,92 @@
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: acquire-book
+description: Create a new bibliographic record for a title entering the collection.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+  aggregate: book
+actors:
+  - cataloger
+data:
+  type: object
+  required: [isbn, title, authors]
+  properties:
+    isbn:
+      type: string
+    title:
+      type: string
+      minLength: 1
+    authors:
+      type: array
+      minItems: 1
+      items:
+        type: object
+        required: [name]
+        properties:
+          name:
+            type: string
+          author-id:
+            type: string
+            format: uuid
+    publishYear:
+      type: integer
+    subjects:
+      type: array
+      items:
+        type: string
+publishes:
+  - book-acquired
+constraints:
+  - name: isbn-not-already-cataloged
+    rule: No book-acquired event may already exist for this isbn.
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: add-copy
+description: Register a new physical copy under an existing title.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+  aggregate: book-copy
+actors:
+  - cataloger
+data:
+  type: object
+  required: [barcode, isbn]
+  properties:
+    barcode:
+      type: string
+    isbn:
+      type: string
+    location:
+      type: string
+publishes:
+  - copy-added
+constraints:
+  - name: parent-active
+    rule: Referenced book must be in status active.
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: withdraw-book
+description: Mark a title as withdrawn and remove it from active catalog search.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+  aggregate: book
+actors:
+  - cataloger
+data:
+  type: object
+  required: [isbn, reason]
+  properties:
+    isbn:
+      type: string
+    reason:
+      type: string
+      enum: [weeded, lost-all-copies, damaged-beyond-repair]
+publishes:
+  - book-withdrawn

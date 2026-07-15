@@ -1,0 +1,71 @@
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: order-created
+description: A purchase order was submitted to a vendor.
+scope:
+  domain: collection-network
+  boundedContext: acquisitions
+  aggregate: purchase-order
+data:
+  type: object
+  required: [order-id, vendor-id, lines, created-at]
+  properties:
+    order-id:
+      type: string
+    vendor-id:
+      type: string
+    lines:
+      type: array
+      items:
+        type: object
+        properties:
+          line-id:
+            type: string
+          isbn:
+            type: string
+          quantity:
+            type: integer
+          unit-price-cents:
+            type: integer
+    created-at:
+      type: string
+      format: date-time
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event
+name: shipment-received
+description: >
+  A shipment was received against a purchase order. Carries ISBN and barcodes for each
+  received copy so cataloging can ingest new titles.
+scope:
+  domain: collection-network
+  boundedContext: acquisitions
+  aggregate: purchase-order
+data:
+  type: object
+  required: [order-id, received-at, items]
+  properties:
+    order-id:
+      type: string
+    received-at:
+      type: string
+      format: date-time
+    items:
+      type: array
+      items:
+        type: object
+        required: [isbn, barcodes]
+        properties:
+          isbn:
+            type: string
+          title:
+            type: string
+          authors:
+            type: array
+            items:
+              type: string
+          barcodes:
+            type: array
+            items:
+              type: string

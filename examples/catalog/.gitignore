@@ -18,8 +18,11 @@ yarn-error.log*
 .eventcatalog-core
 
 events/
+!models/**/events/
 domains/
 services/
 commands/
+!models/**/commands/
 queries/
+!models/**/queries/
 public/ai/

@@ -1,0 +1,59 @@
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: enroll-patron
+description: Register a new patron and issue a library card in one atomic decision.
+scope:
+  domain: public-library
+  boundedContext: membership
+  dynamicConsistencyBoundary: patron-enrollment
+actors:
+  - membership-clerk
+  - self-service-patron
+data:
+  type: object
+  required: [patron-id, display-name, email, tier]
+  properties:
+    patron-id:
+      type: string
+      format: uuid
+    display-name:
+      type: string
+      minLength: 1
+    email:
+      type: string
+      format: email
+    tier:
+      type: string
+      enum: [standard, educator, senior]
+publishes:
+  - patron-enrolled
+constraints:
+  - name: age-verification
+    rule: Educator tier requires staff verification of institutional affiliation.
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: command
+name: suspend-patron
+description: Suspend borrowing privileges for a patron with outstanding fines or violations.
+scope:
+  domain: public-library
+  boundedContext: membership
+  aggregate: patron
+actors:
+  - membership-clerk
+data:
+  type: object
+  required: [patron-id, reason]
+  properties:
+    patron-id:
+      type: string
+      format: uuid
+    reason:
+      type: string
+      enum: [unpaid-fines, policy-violation, lost-card-reported]
+publishes:
+  - patron-suspended
+constraints:
+  - name: not-already-suspended
+    rule: Patron status must be active.

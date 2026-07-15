@@ -7,23 +7,24 @@ const libraryModelPath = path.join(__dirname, 'models', 'library');
 /** @type {import('@eventcatalog/core/bin/eventcatalog.config').Config} */
 export default {
   cId: '00000000-0000-0000-0000-000000000001',
-  title: 'Library Network Catalog',
+  title: 'Library Network Demo',
   tagline: 'EventCatalog demo generated from the Library Network ESDM model',
   organizationName: 'Library Network Demo',
-  homepageLink: 'https://www.esdm.io/',
-  editUrl: 'https://github.com/dgoerdes/eventcatalog-generator-esdm/edit/main',
+  homepageLink: 'https://github.com/dgoerdes/eventcatalog-generator-esdm',
   trailingSlash: false,
   base: '/',
+
   logo: {
-    alt: 'EventCatalog Logo',
     src: '/logo.png',
-    text: 'Library Demo',
+    text: 'Library Network Demo',
   },
+
   docs: {
     sidebar: {
       showPageHeadings: true,
     },
   },
+
   generators: [
     [
       '@dgoerdes/eventcatalog-generator-esdm',
@@ -60,4 +61,7 @@ export default {
       },
     ],
   ],
+
+  theme: 'sunset',
+  repositoryUrl: 'https://github.com/dgoerdes/eventcatalog-generator-esdm',
 };

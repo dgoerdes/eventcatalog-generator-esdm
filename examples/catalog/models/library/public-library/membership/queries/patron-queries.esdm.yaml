@@ -1,0 +1,38 @@
+apiVersion: schema.esdm.io/core/v1
+kind: query
+name: find-patron
+description: Look up patron profile by card number or email for desk verification.
+scope:
+  domain: public-library
+  boundedContext: membership
+readModel: patrons
+actors:
+  - membership-clerk
+parameters:
+  type: object
+  properties:
+    card-number:
+      type: string
+    email:
+      type: string
+  oneOf:
+    - required: [card-number]
+    - required: [email]
+result:
+  type: object
+  properties:
+    patron-id:
+      type: string
+    display-name:
+      type: string
+    status:
+      type: string
+    max-open-loans:
+      type: integer
+    fine-balance-cents:
+      type: integer
+constraints:
+  - name: eligibility-hint
+    rule: >
+      When called from circulation, include implicit eligibility (active and under loan
+      limit) in the result metadata without exposing internal suspension reasons to patrons.
