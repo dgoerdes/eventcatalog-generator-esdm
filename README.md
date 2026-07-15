@@ -6,28 +6,28 @@ This is a one-way generator: ESDM `.esdm.yaml` files in, EventCatalog resources 
 
 ## Scope
 
-**v0.1 is intentionally one-way.** ESDM → EventCatalog only. Bidirectional sync (write-back to ESDM) would require conflict resolution, round-trip fidelity for prose rules, and a much larger SDK surface (`rm*`, diffing, merge). That is a separate project.
+**v0.1 is intentionally one-way.** ESDM → EventCatalog only. Bidirectional sync (write-back to ESDM) would require conflict resolution, round-trip fidelity for prose rules, and a much larger SDK surface (`rm`*, diffing, merge). That is a separate project.
 
 ## Mapping
 
 ESDM's hierarchy maps to EventCatalog 4.0 systems and services:
 
-| ESDM concept | EventCatalog resource | Notes |
-|---|---|---|
-| `domain` | Domain | Via config, validated against ESDM |
-| `bounded-context` | System | Grouped under the domain; owns consistency-unit services |
-| `aggregate` | Service | Badge: `Aggregate`; owns scoped commands/events |
-| `dynamic-consistency-boundary` | Service | Badge: `DCB`; owns DCB commands and emitted BC events |
-| `read-model` | Service | Badge: `Read Model`; owns queries and projected events |
-| `domain-service` | Service | Badge: `Domain Service`; stateless domain operations |
-| `command` / `event` / `query` | Message | Owned by the matching consistency-unit service |
-| `external-system` | External service | `externalSystem: true` at domain level |
-| `policy` | Integration service | Badge: `Policy`; domain-scoped `handles` / `emits` |
-| `event-handler` | Integration service | Badge: `Event Handler`; side effects in markdown |
-| `process-manager` | Integration service + Flow | Badge: `Process Manager`; flow documents reactions |
-| `context-mapping` | System `relationships` | BC-to-BC mappings; external endpoints noted in system markdown |
-| `actor` | System `actors` | Mapped from BC-scoped actors |
-| `metadata.labels` | Service `badges` | Tag-like passthrough |
+| ESDM concept                   | EventCatalog resource      | Notes                                                          |
+| ------------------------------ | -------------------------- | -------------------------------------------------------------- |
+| `domain`                       | Domain                     | Via config, validated against ESDM                             |
+| `bounded-context`              | System                     | Grouped under the domain; owns consistency-unit services       |
+| `aggregate`                    | Service                    | Badge: `Aggregate`; owns scoped commands/events                |
+| `dynamic-consistency-boundary` | Service                    | Badge: `DCB`; owns DCB commands and emitted BC events          |
+| `read-model`                   | Service                    | Badge: `Read Model`; owns queries and projected events         |
+| `domain-service`               | Service                    | Badge: `Domain Service`; stateless domain operations           |
+| `command` / `event` / `query`  | Message                    | Owned by the matching consistency-unit service                 |
+| `external-system`              | External service           | `externalSystem: true` at domain level                         |
+| `policy`                       | Integration service        | Badge: `Policy`; domain-scoped `handles` / `emits`             |
+| `event-handler`                | Integration service        | Badge: `Event Handler`; side effects in markdown               |
+| `process-manager`              | Integration service + Flow | Badge: `Process Manager`; flow documents reactions             |
+| `context-mapping`              | System `relationships`     | BC-to-BC mappings; external endpoints noted in system markdown |
+| `actor`                        | System `actors`            | Mapped from BC-scoped actors                                   |
+| `metadata.labels`              | Service `badges`           | Tag-like passthrough                                           |
 
 **Why bounded context → system?** EventCatalog systems describe software capabilities made of cooperating resources. ESDM bounded contexts are that layer — aggregates, DCBs, and read models are consistency units inside them, not deployable boundaries on their own.
 
@@ -84,16 +84,16 @@ module.exports = {
 
 ### Options
 
-| Option | Description |
-|---|---|
-| `models` | Array of ESDM model sources. `path` can be a directory (scans `**/*.esdm.yaml`), a single file, or a URL. |
-| `domain` | EventCatalog domain to group generated systems under. `id` should match the ESDM domain name when possible. |
-| `systems` | Optional per–bounded-context overrides for system `id`, `name`, `version`, `owners`, `draft`. |
-| `services` | Deprecated alias for `systems`. |
-| `units` | Optional per–consistency-unit overrides (`boundedContext` + `unit` name). |
-| `integration` | Optional overrides for policies, event-handlers, process-managers, and external systems. |
-| `debug` | Verbose logging. Also enabled via `npm run generate -- debug`. |
-| `saveSourceFiles` | Attach source `.esdm.yaml` files to each generated service (default: `true`). |
+| Option            | Description                                                                                                 |
+| ----------------- | ----------------------------------------------------------------------------------------------------------- |
+| `models`          | Array of ESDM model sources. `path` can be a directory (scans `**/*.esdm.yaml`), a single file, or a URL.   |
+| `domain`          | EventCatalog domain to group generated systems under. `id` should match the ESDM domain name when possible. |
+| `systems`         | Optional per–bounded-context overrides for system `id`, `name`, `version`, `owners`, `draft`.               |
+| `services`        | Deprecated alias for `systems`.                                                                             |
+| `units`           | Optional per–consistency-unit overrides (`boundedContext` + `unit` name).                                   |
+| `integration`     | Optional overrides for policies, event-handlers, process-managers, and external systems.                    |
+| `debug`           | Verbose logging. Also enabled via `npm run generate -- debug`.                                              |
+| `saveSourceFiles` | Attach source `.esdm.yaml` files to each generated service (default: `true`).                               |
 
 ## Generate
 
@@ -114,7 +114,7 @@ npm install
 npm run catalog:demo
 ```
 
-Open http://localhost:3000 — you should see the **Craven** domain, **Tenant Management** and **Compliance Management** systems, consistency-unit services, integration services, and external systems.
+Open [http://localhost:3000](http://localhost:3000) — you should see the **Craven** domain, **Tenant Management** and **Compliance Management** systems, consistency-unit services, integration services, and external systems.
 
 **Requires Node.js >= 22.12.0** (current EventCatalog / Astro requirement).
 
@@ -133,6 +133,11 @@ The `src/test/fixtures/library` directory contains the [ESDM first-model tutoria
 ```bash
 ./src/test/esdm lint -d src/test/fixtures/library
 ```
+
+## TODO:
+
+- [ ] Assign better colors for Kind badges (match command, query, event with event catalog colors).
+- [ ] Message Flow seems to be inverted, Aggregate has to emit events not consume them. And they receive commands.
 
 ## License
 

@@ -58,23 +58,46 @@ describe('mapper', () => {
     const booksService = mapped.services.find((service) => service.id === 'books');
 
     expect(bookService?.sidebarBadge).toBe('Aggregate');
+    expect(bookService?.badges?.[0]).toMatchObject({ content: 'Aggregate', backgroundColor: '#2563eb', textColor: '#ffffff' });
     expect(bookService?.messages.map((message) => message.id).sort()).toEqual(['acquire', 'acquired']);
     expect(booksService?.sidebarBadge).toBe('Read Model');
+    expect(booksService?.badges?.[0]).toMatchObject({ content: 'Read Model', backgroundColor: '#16a34a', textColor: '#ffffff' });
     expect(booksService?.messages.map((message) => message.id)).toEqual(['list-books', 'acquired']);
+
+    const acquire = mapped.messages.find((message) => message.id === 'acquire');
+    expect(acquire?.badges?.[0]?.content).toBe('Command');
+    expect(mapped.messages.find((message) => message.id === 'acquired')?.badges?.[0]?.content).toBe('Event');
+    expect(mapped.messages.find((message) => message.id === 'list-books')?.badges?.[0]?.content).toBe('Query');
   });
 
   it('maps craven integration artifacts', async () => {
     const model = await parseEsdmModel(cravenFixture);
     const mapped = mapEsdmModel(model, { id: 'craven', name: 'Craven', version: '1.0.0' });
 
+    expect(mapped.domain.badges?.[0]).toMatchObject({ content: 'Domain', backgroundColor: '#0d9488' });
+    expect(mapped.systems.every((system) => system.badges?.[0]?.content === 'Bounded Context')).toBe(true);
+
+    const command = mapped.messages.find((message) => message.id === 'add-domain-urls');
+    expect(command?.badges?.[0]).toMatchObject({ content: 'Command', backgroundColor: '#db2777' });
+
+    const event = mapped.messages.find((message) => message.id === 'added');
+    expect(event?.badges?.[0]).toMatchObject({ content: 'Event', backgroundColor: '#d97706' });
+
+    const query = mapped.messages.find((message) => message.id === 'get-domain');
+    expect(query?.badges?.[0]).toMatchObject({ content: 'Query', backgroundColor: '#6366f1' });
+
     expect(mapped.systems.map((system) => system.id).sort()).toEqual(['compliance-management', 'tenant-management']);
 
     const policyServices = mapped.services.filter((service) => service.esdmKind === 'policy');
     expect(policyServices.length).toBeGreaterThan(0);
     expect(policyServices.every((service) => service.placement === 'domain')).toBe(true);
+    expect(policyServices.every((service) => service.badges?.[0]?.content === 'Policy')).toBe(true);
+    expect(policyServices.every((service) => service.badges?.[0]?.backgroundColor === '#dc2626')).toBe(true);
 
     const externalServices = mapped.services.filter((service) => service.externalSystem);
     expect(externalServices.map((service) => service.id).sort()).toEqual(['amazon-cognito', 'aws-bedrock']);
+    expect(externalServices.every((service) => service.badges?.[0]?.content === 'External')).toBe(true);
+    expect(externalServices.every((service) => service.badges?.[0]?.backgroundColor === '#4b5563')).toBe(true);
 
     const tenantSystem = mapped.systems.find((system) => system.id === 'tenant-management');
     expect(tenantSystem?.relationships.some((relationship) => relationship.id === 'compliance-management')).toBe(true);

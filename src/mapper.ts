@@ -30,6 +30,7 @@ import type {
   ParsedEsdmModel,
   SystemOverride,
 } from './types.js';
+import { kindBadgeFields } from './badges.js';
 import { filterContextMappingsForDomain, filterDomainScoped, getBoundedContextKey, groupBoundedContexts } from './parser.js';
 
 const toTitle = (value: string) =>
@@ -37,17 +38,6 @@ const toTitle = (value: string) =>
     .split(/[-_]/)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
-
-const KIND_BADGES: Record<string, string> = {
-  aggregate: 'Aggregate',
-  'dynamic-consistency-boundary': 'DCB',
-  'read-model': 'Read Model',
-  'domain-service': 'Domain Service',
-  policy: 'Policy',
-  'process-manager': 'Process Manager',
-  'event-handler': 'Event Handler',
-  'external-system': 'External',
-};
 
 const renderRules = (title: string, rules?: Array<{ name: string; rule?: string; condition?: string }>) => {
   if (!rules || rules.length === 0) {
@@ -68,18 +58,6 @@ export const escapeMdxLiterals = (markdown: string) =>
 /** EventCatalog renders name and summary from frontmatter — body markdown must not repeat them. */
 const bodyMarkdown = (...parts: Array<string | undefined | null | false>) =>
   escapeMdxLiterals(parts.filter(Boolean).join(''));
-
-const esdmLabelsToBadges = (labels?: Record<string, string>) => {
-  if (!labels) {
-    return undefined;
-  }
-
-  return Object.entries(labels).map(([key, value]) => ({
-    content: `${key}:${value}`,
-    backgroundColor: 'gray',
-    textColor: 'white',
-  }));
-};
 
 const isExternalEndpoint = (endpoint: EsdmMappingEndpoint): endpoint is { domain: string; externalSystem: string } =>
   'externalSystem' in endpoint;
@@ -131,6 +109,7 @@ export const mapCommandMessage = (
       renderRules('Constraints', command.constraints)
     ),
     schema: command.data,
+    ...kindBadgeFields('command', command.metadata?.labels),
   };
 };
 
@@ -150,6 +129,7 @@ export const mapEventMessage = (event: BoundedContextContext['events'][number], 
       cloudEventType ? `\n**CloudEvents type:** \`${cloudEventType}\`\n` : ''
     ),
     schema: event.data,
+    ...kindBadgeFields('event', event.metadata?.labels),
   };
 };
 
@@ -166,6 +146,7 @@ export const mapQueryMessage = (query: BoundedContextContext['queries'][number],
       renderRules('Constraints', query.constraints)
     ),
     schema: query.result,
+    ...kindBadgeFields('query', query.metadata?.labels),
   };
 };
 
@@ -243,8 +224,7 @@ const mapAggregateService = (
     sends: commandMessages.map((message) => ({ id: message.id, version })),
     receives: eventMessages.map((message) => ({ id: message.id, version })),
     messages,
-    sidebarBadge: KIND_BADGES.aggregate,
-    badges: esdmLabelsToBadges(aggregate.metadata?.labels),
+    ...kindBadgeFields('aggregate', aggregate.metadata?.labels),
     placement: 'system',
     boundedContext: context.boundedContext.name,
     esdmKind: 'aggregate',
@@ -290,8 +270,7 @@ const mapDcbService = (
     sends: commandMessages.map((message) => ({ id: message.id, version })),
     receives: eventMessages.map((message) => ({ id: message.id, version })),
     messages,
-    sidebarBadge: KIND_BADGES['dynamic-consistency-boundary'],
-    badges: esdmLabelsToBadges(dcb.metadata?.labels),
+    ...kindBadgeFields('dynamic-consistency-boundary', dcb.metadata?.labels),
     placement: 'system',
     boundedContext: context.boundedContext.name,
     esdmKind: 'dynamic-consistency-boundary',
@@ -339,8 +318,7 @@ const mapReadModelService = (
     sends: queryMessages.map((message) => ({ id: message.id, version })),
     receives: eventMessages.map((message) => ({ id: message.id, version })),
     messages,
-    sidebarBadge: KIND_BADGES['read-model'],
-    badges: esdmLabelsToBadges(readModel.metadata?.labels),
+    ...kindBadgeFields('read-model', readModel.metadata?.labels),
     placement: 'system',
     boundedContext: context.boundedContext.name,
     esdmKind: 'read-model',
@@ -377,8 +355,7 @@ const mapDomainServiceResource = (
     sends: [],
     receives: [],
     messages: [],
-    sidebarBadge: KIND_BADGES['domain-service'],
-    badges: esdmLabelsToBadges(domainService.metadata?.labels),
+    ...kindBadgeFields('domain-service', domainService.metadata?.labels),
     placement: 'system',
     boundedContext: context.boundedContext.name,
     esdmKind: 'domain-service',
@@ -412,7 +389,7 @@ const mapOrphanEventsService = (
     sends: [],
     receives: eventMessages.map((message) => ({ id: message.id, version })),
     messages: eventMessages,
-    sidebarBadge: 'Events',
+    ...kindBadgeFields('events'),
     placement: 'system',
     boundedContext: context.boundedContext.name,
     esdmKind: 'aggregate',
@@ -581,6 +558,7 @@ export const mapBoundedContextSystem = (
     services: services.map((service) => ({ id: service.id, version: service.version })),
     relationships,
     actors: context.actors.map(mapActor),
+    ...kindBadgeFields('bounded-context', context.boundedContext.metadata?.labels),
     draft: systemOverride?.draft,
     owners: systemOverride?.owners,
   };
@@ -628,8 +606,7 @@ export const mapPolicyService = (policy: EsdmPolicy, version: string, override?:
     sends,
     receives,
     messages: [],
-    sidebarBadge: KIND_BADGES.policy,
-    badges: esdmLabelsToBadges(policy.metadata?.labels),
+    ...kindBadgeFields('policy', policy.metadata?.labels),
     placement: 'domain',
     esdmKind: 'policy',
     draft: override?.draft,
@@ -674,8 +651,7 @@ export const mapEventHandlerService = (
     sends: [],
     receives,
     messages: [],
-    sidebarBadge: KIND_BADGES['event-handler'],
-    badges: esdmLabelsToBadges(eventHandler.metadata?.labels),
+    ...kindBadgeFields('event-handler', eventHandler.metadata?.labels),
     placement: 'domain',
     esdmKind: 'event-handler',
     draft: override?.draft,
@@ -738,6 +714,7 @@ export const mapProcessManagerService = (
     ),
     steps: flowSteps,
     linkedServiceId: serviceId,
+    ...kindBadgeFields('process-manager', processManager.metadata?.labels),
     draft: override?.draft,
     owners: override?.owners,
   };
@@ -756,8 +733,7 @@ export const mapProcessManagerService = (
     sends,
     receives,
     messages: [],
-    sidebarBadge: KIND_BADGES['process-manager'],
-    badges: esdmLabelsToBadges(processManager.metadata?.labels),
+    ...kindBadgeFields('process-manager', processManager.metadata?.labels),
     flows: [{ id: flowId, version }],
     placement: 'domain',
     esdmKind: 'process-manager',
@@ -795,8 +771,7 @@ export const mapExternalSystemService = (
     sends: [],
     receives: [],
     messages: [],
-    sidebarBadge: KIND_BADGES['external-system'],
-    badges: esdmLabelsToBadges(externalSystem.metadata?.labels),
+    ...kindBadgeFields('external-system', externalSystem.metadata?.labels),
     externalSystem: true,
     placement: 'domain',
     esdmKind: 'external-system',
@@ -810,18 +785,19 @@ export const mapDomain = (
   domainConfig: DomainConfig,
   systems: Array<{ id: string; version: string }>,
   domainServices: Array<{ id: string; version: string }>,
-  esdmDomainName: string,
-  esdmDomainDescription?: string
+  esdmDomain: EsdmDomain
 ): MappedDomain => {
   return {
     id: domainConfig.id,
     name: domainConfig.name,
     version: domainConfig.version,
-    markdown: bodyMarkdown(`\nGenerated from ESDM domain \`${esdmDomainName}\`.\n`),
+    summary: esdmDomain.description ?? domainConfig.name,
+    markdown: bodyMarkdown(`\nGenerated from ESDM domain \`${esdmDomain.name}\`.\n`),
     draft: domainConfig.draft,
     owners: domainConfig.owners,
     systems,
     services: domainServices,
+    ...kindBadgeFields('domain', esdmDomain.metadata?.labels),
   };
 };
 
@@ -929,8 +905,7 @@ export const mapEsdmModel = (
     domainConfig,
     systems.map((system) => ({ id: system.id, version: system.version })),
     integrationServices.map((service) => ({ id: service.id, version: service.version })),
-    esdmDomain.name,
-    esdmDomain.description
+    esdmDomain
   );
 
   const messageMap = new Map<string, MappedMessage>();

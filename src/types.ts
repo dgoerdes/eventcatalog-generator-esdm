@@ -362,6 +362,8 @@ export interface MappedMessage {
   markdown: string;
   schema?: Record<string, unknown>;
   draft?: boolean;
+  sidebarBadge?: string;
+  badges?: MappedBadge[];
 }
 
 export interface MappedService {
@@ -412,6 +414,8 @@ export interface MappedSystem {
   actors: MappedSystemActor[];
   draft?: boolean;
   owners?: string[];
+  sidebarBadge?: string;
+  badges?: MappedBadge[];
 }
 
 export interface MappedFlowStep {
@@ -435,6 +439,8 @@ export interface MappedFlow {
   owners?: string[];
   /** Service that owns this flow (process-manager). */
   linkedServiceId?: string;
+  sidebarBadge?: string;
+  badges?: MappedBadge[];
 }
 
 export interface MappedDomain {
@@ -442,10 +448,13 @@ export interface MappedDomain {
   name: string;
   version: string;
   markdown: string;
+  summary?: string;
   draft?: boolean;
   owners?: string[];
   systems: Array<{ id: string; version: string }>;
   services: Array<{ id: string; version: string }>;
+  sidebarBadge?: string;
+  badges?: MappedBadge[];
 }
 
 export interface MappedModel {

@@ -5,7 +5,8 @@ import path from 'node:path';
 import { z } from 'zod';
 import { mapEsdmModel } from './mapper.js';
 import { loadEsdmDocuments, parseEsdmModel, resolveDomain } from './parser.js';
-import { ESDM_SCHEMA_FILE_NAME, type GeneratorOptions, type MappedFlow, type MappedMessage, type MappedService, type MappedSystem } from './types.js';
+import { buildBadgePayload } from './badges.js';
+import { ESDM_SCHEMA_FILE_NAME, type GeneratorOptions, type MappedDomain, type MappedFlow, type MappedMessage, type MappedService, type MappedSystem } from './types.js';
 
 type CatalogSdk = ReturnType<typeof utils>;
 
@@ -148,6 +149,7 @@ const writeMessage = async (sdk: CatalogSdk, message: MappedMessage) => {
       ...(message.summary ? { summary: message.summary } : {}),
       ...(message.draft ? { draft: true } : {}),
       ...(message.schema ? { schemaPath: ESDM_SCHEMA_FILE_NAME } : {}),
+      ...buildBadgePayload(message),
     },
     { override: true }
   );
@@ -176,8 +178,7 @@ const buildServicePayload = (service: MappedService, serviceMarkdown: string) =>
   ...(service.draft ? { draft: true } : {}),
   ...(service.externalSystem ? { externalSystem: true } : {}),
   ...(service.flows ? { flows: service.flows } : {}),
-  ...(service.sidebarBadge ? { sidebar: { badge: service.sidebarBadge } } : {}),
-  ...(service.badges?.length ? { badges: service.badges } : {}),
+  ...buildBadgePayload(service),
   ...(service.schema ? { schemaPath: ESDM_SCHEMA_FILE_NAME } : {}),
 });
 
@@ -265,9 +266,40 @@ const writeSystemResource = async (
       ...(system.summary ? { summary: system.summary } : {}),
       ...(system.owners ? { owners: system.owners } : {}),
       ...(system.draft ? { draft: true } : {}),
+      ...buildBadgePayload(system),
     },
     {
       path: systemPath,
+      override: true,
+    }
+  );
+};
+
+const writeDomainResource = async (sdk: CatalogSdk, domain: MappedDomain, domainPath: string) => {
+  const { writeDomain, getDomain, versionDomain } = sdk;
+
+  const latestDomain = await getDomain(domain.id, 'latest');
+
+  if (latestDomain && latestDomain.version !== domain.version) {
+    await versionDomain(domain.id);
+    console.log(chalk.cyan(` - Versioned previous domain (v${latestDomain.version})`));
+  }
+
+  await writeDomain(
+    {
+      id: domain.id,
+      name: domain.name,
+      version: domain.version,
+      markdown: domain.markdown,
+      systems: domain.systems,
+      services: domain.services,
+      ...(domain.summary ? { summary: domain.summary } : {}),
+      ...(domain.owners ? { owners: domain.owners } : {}),
+      ...(domain.draft ? { draft: true } : {}),
+      ...buildBadgePayload(domain),
+    },
+    {
+      path: domainPath,
       override: true,
     }
   );
@@ -292,6 +324,7 @@ const writeFlowResource = async (sdk: CatalogSdk, flow: MappedFlow, flowPath: st
       ...(flow.summary ? { summary: flow.summary } : {}),
       ...(flow.owners ? { owners: flow.owners } : {}),
       ...(flow.draft ? { draft: true } : {}),
+      ...buildBadgePayload(flow),
     },
     {
       path: flowPath,
@@ -314,7 +347,6 @@ export default async function generator(_config: unknown, options: GeneratorOpti
   const sdk = utils(process.env.PROJECT_DIR);
 
   const {
-    writeDomain,
     addSystemToDomain,
     addServiceToDomain,
     addServiceToSystem,
@@ -353,9 +385,8 @@ export default async function generator(_config: unknown, options: GeneratorOpti
       defaultVersion,
     });
 
-    const { id: domainId, name: domainName, version: domainVersion, owners: domainOwners } = validatedOptions.domain;
+    const { id: domainId, name: domainName, version: domainVersion } = validatedOptions.domain;
     const currentDomain = await getDomain(domainId, 'latest');
-    const domain = await getDomain(domainId, domainVersion);
 
     console.log(chalk.blue(`\nProcessing domain: ${domainName} (v${domainVersion})`));
 
@@ -364,22 +395,13 @@ export default async function generator(_config: unknown, options: GeneratorOpti
       console.log(chalk.cyan(` - Versioned previous domain (v${currentDomain.version})`));
     }
 
-    if (!domain || domain.version !== domainVersion) {
-      await writeDomain({
-        id: mapped.domain.id,
-        name: mapped.domain.name,
-        version: mapped.domain.version,
-        markdown: mapped.domain.markdown,
-        systems: mapped.domain.systems,
-        services: mapped.domain.services,
-        ...(domainOwners && { owners: domainOwners }),
-        ...(mapped.domain.draft && { draft: true }),
-      });
+    const domainResource = await getResourcePath(process.env.PROJECT_DIR as string, domainId, domainVersion);
+    const domainPath = domainResource
+      ? path.join('../', domainResource.directory)
+      : path.join('../', 'domains', domainId);
 
-      console.log(chalk.cyan(` - Domain (v${domainVersion}) created`));
-    } else {
-      console.log(chalk.yellow(` - Domain (v${domainVersion}) already exists, skipped creation...`));
-    }
+    await writeDomainResource(sdk, mapped.domain, domainPath);
+    console.log(chalk.cyan(` - Domain (v${domainVersion}) created`));
 
     for (const systemRef of mapped.domain.systems) {
       await addSystemToDomain(domainId, systemRef, domainVersion);
@@ -389,10 +411,7 @@ export default async function generator(_config: unknown, options: GeneratorOpti
       await addServiceToDomain(domainId, serviceRef, domainVersion);
     }
 
-    const domainResource = await getResourcePath(process.env.PROJECT_DIR as string, domainId, domainVersion);
-    const domainBasePath = domainResource
-      ? path.join('../', domainResource.directory)
-      : path.join('../', 'domains', domainId);
+    const domainBasePath = domainPath;
 
     for (const message of mapped.messages) {
       await writeMessage(sdk, message);
