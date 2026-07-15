@@ -1,0 +1,41 @@
+apiVersion: schema.esdm.io/core/v1
+kind: aggregate
+name: ill-request
+description: >
+  One inter-library loan request from placement through return to the lending library.
+  Tracks partner library, patron, and shipping milestones.
+scope:
+  domain: collection-network
+  boundedContext: inter-library-loan
+identifiedBy:
+  source: state
+  field: request-id
+state:
+  type: object
+  required: [request-id, patron-id, isbn, lending-library-code, status, requested-at]
+  properties:
+    request-id:
+      type: string
+      format: uuid
+    patron-id:
+      type: string
+      format: uuid
+    isbn:
+      type: string
+    lending-library-code:
+      type: string
+      description: OCLC symbol of the partner library.
+    status:
+      type: string
+      enum: [requested, shipped, at-pickup-desk, with-patron, return-in-transit, completed, canceled]
+    requested-at:
+      type: string
+      format: date-time
+    due-back-at:
+      type: string
+      format: date-time
+    tracking-number:
+      type: string
+invariants:
+  - name: due-after-ship
+    rule: due-back-at is set only after status reaches shipped and must be after shipped date.

@@ -1,0 +1,43 @@
+apiVersion: schema.esdm.io/core/v1
+kind: event-handler
+name: patron-welcome-email
+description: >
+  Sends a welcome email when a new patron enrolls. Does not mutate domain state.
+scope:
+  domain: public-library
+deliveryGuarantee: at-least-once
+idempotency:
+  owner: self
+  strategy: Skip when the same CloudEvents id was already processed.
+handles:
+  - boundedContext: membership
+    event: patron-enrolled
+sideEffects:
+  - type: external-call
+    externalSystem: notification-service
+    rule: >
+      Send welcome template with patron display-name, card-number, and portal login link to
+      the enrolled email address.
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event-handler
+name: due-date-reminder-email
+description: >
+  Sends a reminder email three days before a loan due date. Triggered by the loan-reminder
+  process manager timer.
+scope:
+  domain: public-library
+deliveryGuarantee: at-least-once
+idempotency:
+  owner: self
+  strategy: Track sent reminders by loan-id + due-at pair to avoid duplicate emails.
+handles:
+  - boundedContext: circulation
+    event: loan-reminder-due
+sideEffects:
+  - type: external-call
+    externalSystem: notification-service
+    rule: >
+      Send due-date-reminder template with patron name, title, and formatted due-at to the
+      patron email resolved from membership.

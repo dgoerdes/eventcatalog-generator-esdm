@@ -1,0 +1,37 @@
+apiVersion: schema.esdm.io/core/v1
+kind: read-model
+name: pending-orders
+description: >
+  Acquisitions desk view of open purchase orders awaiting delivery or partial receipt.
+scope:
+  domain: collection-network
+  boundedContext: acquisitions
+paradigm: tabular
+schema:
+  type: array
+  items:
+    type: object
+    required: [order-id, vendor-id, status, open-line-count]
+    properties:
+      order-id:
+        type: string
+      vendor-id:
+        type: string
+      status:
+        type: string
+      expected-delivery-at:
+        type: string
+        format: date
+      open-line-count:
+        type: integer
+projections:
+  - boundedContext: acquisitions
+    aggregate: purchase-order
+    event: order-created
+    rule: Insert row with order-id, vendor-id, status submitted, open-line-count from line count.
+  - boundedContext: acquisitions
+    aggregate: purchase-order
+    event: shipment-received
+    rule: >
+      Update status and decrement open-line-count for lines fully received; remove row when
+      all lines are complete.

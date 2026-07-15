@@ -1,0 +1,28 @@
+apiVersion: schema.esdm.io/core/v1
+kind: actor
+name: cataloger
+description: >
+  Staff librarian who creates and maintains bibliographic records. May acquire titles,
+  add copies, and withdraw weeded materials.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+type: human
+responsibilities:
+  - Acquire and withdraw bibliographic titles
+  - Register physical copies on the shelf
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: actor
+name: patron
+description: >
+  Registered library member browsing the online catalog. May search titles and place
+  holds; cannot mutate catalog records directly.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+type: human
+responsibilities:
+  - Search the public catalog
+  - Place holds on unavailable titles

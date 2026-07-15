@@ -1,0 +1,13 @@
+apiVersion: schema.esdm.io/core/v1
+kind: bounded-context
+name: acquisitions
+description: >
+  Purchasing workflow — vendor orders, shipment receiving, and handoff to cataloging when
+  new titles enter the collection.
+scope:
+  domain: collection-network
+ubiquitousLanguage:
+  - term: Purchase order
+    definition: A commitment to buy one or more titles from a vendor at agreed unit prices.
+  - term: Shipment
+    definition: Physical delivery of ordered copies; receiving triggers catalog ingestion.

@@ -1,0 +1,12 @@
+apiVersion: schema.esdm.io/core/v1
+kind: actor
+name: acquisitions-librarian
+description: >
+  Staff who create purchase orders, receive shipments, and coordinate with vendors.
+scope:
+  domain: collection-network
+  boundedContext: acquisitions
+type: human
+responsibilities:
+  - Create and track vendor purchase orders
+  - Receive shipments into the collection

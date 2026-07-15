@@ -21,6 +21,6 @@ dist/
 # Claude
 .claude/settings.local.json
 
-# ESDM
-src/test/esdm
+# ESDM CLI binary (schemas in esdm/schemas/ are tracked)
+esdm/esdm
 

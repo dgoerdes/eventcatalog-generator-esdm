@@ -1,0 +1,19 @@
+apiVersion: schema.esdm.io/core/v1
+kind: domain
+name: collection-network
+description: >
+  Back-office collection operations: purchasing new titles, coordinating inter-library
+  loans with partner institutions, and planning conservation work on fragile materials.
+  Feeds the public catalog when acquisitions are received.
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: subdomain
+name: collection-operations
+scope:
+  domain: collection-network
+type: core
+boundedContexts:
+  - acquisitions
+  - inter-library-loan
+  - preservation

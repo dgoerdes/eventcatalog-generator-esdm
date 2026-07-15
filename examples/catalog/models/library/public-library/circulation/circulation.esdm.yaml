@@ -1,0 +1,15 @@
+apiVersion: schema.esdm.io/core/v1
+kind: bounded-context
+name: circulation
+description: >
+  Lending desk operations — check-out, check-in, renewals, and hold fulfillment when
+  copies return. Consults cataloging for copy status and membership for patron eligibility.
+scope:
+  domain: public-library
+ubiquitousLanguage:
+  - term: Loan
+    definition: A time-bounded lending of one copy to one patron, tracked until check-in.
+  - term: Hold
+    definition: A patron reservation queue entry for a title; fulfilled when a copy becomes available.
+  - term: Renewal
+    definition: Extension of a loan due date when no holds are waiting and renewal quota allows.

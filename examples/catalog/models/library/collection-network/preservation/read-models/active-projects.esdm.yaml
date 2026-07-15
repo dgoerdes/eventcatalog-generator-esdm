@@ -1,0 +1,34 @@
+apiVersion: schema.esdm.io/core/v1
+kind: read-model
+name: active-projects
+description: Conservation lab schedule of open projects sorted by condition urgency.
+scope:
+  domain: collection-network
+  boundedContext: preservation
+paradigm: tabular
+schema:
+  type: array
+  items:
+    type: object
+    required: [project-id, title, status, condition-grade]
+    properties:
+      project-id:
+        type: string
+      title:
+        type: string
+      status:
+        type: string
+      condition-grade:
+        type: string
+      target-completion-at:
+        type: string
+        format: date
+projections:
+  - boundedContext: preservation
+    aggregate: conservation-project
+    event: project-started
+    rule: Insert row with project-id, title, status in-progress, condition-grade.
+  - boundedContext: preservation
+    aggregate: conservation-project
+    event: project-completed
+    rule: Remove row for project-id.

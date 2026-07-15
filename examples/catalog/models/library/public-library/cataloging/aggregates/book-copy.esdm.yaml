@@ -1,0 +1,35 @@
+apiVersion: schema.esdm.io/core/v1
+kind: aggregate
+name: book-copy
+description: >
+  One lendable physical item. Barcode is the shelf identity; status tracks whether the
+  copy is available, on loan, in repair, or withdrawn.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+identifiedBy:
+  source: state
+  field: barcode
+state:
+  type: object
+  required: [barcode, isbn, status, added-at]
+  properties:
+    barcode:
+      type: string
+      pattern: "^[0-9]{14}$"
+    isbn:
+      type: string
+    status:
+      type: string
+      enum: [available, on-loan, in-repair, withdrawn]
+    added-at:
+      type: string
+      format: date-time
+    location:
+      type: string
+      description: Stack or room code where the copy is shelved.
+invariants:
+  - name: parent-title-must-exist
+    rule: isbn must reference an active book aggregate before add-copy is accepted.
+  - name: barcode-unique
+    rule: barcode must not already exist on any copy stream in this bounded context.

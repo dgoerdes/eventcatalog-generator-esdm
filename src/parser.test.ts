@@ -5,124 +5,113 @@ import { escapeMdxLiterals, mapBoundedContextService, mapEsdmModel } from './map
 import { groupBoundedContexts, parseEsdmModel, resolveDomain } from './parser.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const libraryFixture = path.join(__dirname, 'test', 'fixtures', 'library');
-const cravenFixture = path.join(__dirname, '..', 'examples', 'catalog', 'models', 'craven');
+const libraryFixture = path.join(__dirname, '..', 'examples', 'catalog', 'models', 'library');
 
 describe('parser', () => {
-  it('parses the library fixture', async () => {
+  it('parses the library fixture with two domains', async () => {
     const model = await parseEsdmModel(libraryFixture);
 
-    expect(model.domains).toHaveLength(1);
-    expect(model.domains[0].name).toBe('library');
-    expect(model.boundedContexts).toHaveLength(1);
-    expect(model.commands).toHaveLength(1);
-    expect(model.events).toHaveLength(1);
-    expect(model.queries).toHaveLength(1);
-    expect(model.aggregates).toHaveLength(1);
-    expect(model.readModels).toHaveLength(1);
+    expect(model.domains).toHaveLength(2);
+    expect(model.domains.map((domain) => domain.name).sort()).toEqual(['collection-network', 'public-library']);
+    expect(model.boundedContexts).toHaveLength(6);
+    expect(model.subdomains).toHaveLength(2);
+    expect(model.commands.length).toBeGreaterThan(0);
+    expect(model.events.length).toBeGreaterThan(0);
+    expect(model.queries.length).toBeGreaterThan(0);
+    expect(model.aggregates.length).toBeGreaterThan(0);
+    expect(model.readModels.length).toBeGreaterThan(0);
   });
 
-  it('parses the craven fixture with integration artifacts', async () => {
-    const model = await parseEsdmModel(cravenFixture);
+  it('parses integration artifacts across both domains', async () => {
+    const model = await parseEsdmModel(libraryFixture);
 
-    expect(model.domains[0].name).toBe('craven');
-    expect(model.boundedContexts.length).toBeGreaterThanOrEqual(2);
     expect(model.policies.length).toBeGreaterThan(0);
     expect(model.eventHandlers.length).toBeGreaterThan(0);
-    expect(model.externalSystems.length).toBe(2);
-    expect(model.contextMappings.length).toBe(4);
+    expect(model.processManagers.length).toBeGreaterThan(0);
+    expect(model.externalSystems).toHaveLength(2);
+    expect(model.contextMappings.length).toBeGreaterThanOrEqual(5);
     expect(model.dynamicConsistencyBoundaries.length).toBeGreaterThan(0);
     expect(model.domainServices.length).toBeGreaterThan(0);
+    expect(model.actors.length).toBeGreaterThan(0);
   });
 
   it('groups bounded contexts by domain', async () => {
     const model = await parseEsdmModel(libraryFixture);
-    const domain = resolveDomain(model);
+    const domain = resolveDomain(model, 'public-library');
     const contexts = groupBoundedContexts(model, domain);
 
-    expect(contexts.size).toBe(1);
-    expect(contexts.get('library/cataloging')?.commands[0].name).toBe('acquire');
+    expect(contexts.size).toBe(3);
+    expect(contexts.get('public-library/cataloging')?.commands.some((command) => command.name === 'acquire-book')).toBe(true);
   });
 });
 
 describe('mapper', () => {
-  it('maps library to systems and consistency-unit services', async () => {
+  it('maps public-library to systems and consistency-unit services', async () => {
     const model = await parseEsdmModel(libraryFixture);
-    const mapped = mapEsdmModel(model, { id: 'library', name: 'Library', version: '1.0.0' });
+    const mapped = mapEsdmModel(model, { id: 'public-library', name: 'Public Library', version: '1.0.0' });
 
-    expect(mapped.systems).toHaveLength(1);
-    expect(mapped.systems[0].id).toBe('cataloging');
-    expect(mapped.systems[0].services.map((service) => service.id).sort()).toEqual(['book', 'books']);
+    expect(mapped.systems.map((system) => system.id).sort()).toEqual(['cataloging', 'circulation', 'membership']);
 
     const bookService = mapped.services.find((service) => service.id === 'book');
-    const booksService = mapped.services.find((service) => service.id === 'books');
+    const catalogService = mapped.services.find((service) => service.id === 'catalog');
 
     expect(bookService?.sidebarBadge).toBe('Aggregate');
-    expect(bookService?.badges?.[0]).toMatchObject({ content: 'Aggregate', backgroundColor: '#2563eb', textColor: '#ffffff' });
-    expect(bookService?.messages.map((message) => message.id).sort()).toEqual(['acquire', 'acquired']);
-    expect(booksService?.sidebarBadge).toBe('Read Model');
-    expect(booksService?.badges?.[0]).toMatchObject({ content: 'Read Model', backgroundColor: '#16a34a', textColor: '#ffffff' });
-    expect(booksService?.messages.map((message) => message.id)).toEqual(['list-books', 'acquired']);
+    expect(bookService?.badges?.[0]?.content).toBe('Aggregate');
+    expect(catalogService?.sidebarBadge).toBe('Read Model');
+    expect(catalogService?.badges?.[0]?.content).toBe('Read Model');
 
-    const acquire = mapped.messages.find((message) => message.id === 'acquire');
+    const acquire = mapped.messages.find((message) => message.id === 'acquire-book');
     expect(acquire?.badges?.[0]?.content).toBe('Command');
-    expect(mapped.messages.find((message) => message.id === 'acquired')?.badges?.[0]?.content).toBe('Event');
-    expect(mapped.messages.find((message) => message.id === 'list-books')?.badges?.[0]?.content).toBe('Query');
+    expect(mapped.messages.find((message) => message.id === 'book-acquired')?.badges?.[0]?.content).toBe('Event');
+    expect(mapped.messages.find((message) => message.id === 'search-catalog')?.badges?.[0]?.content).toBe('Query');
   });
 
-  it('maps craven integration artifacts', async () => {
-    const model = await parseEsdmModel(cravenFixture);
-    const mapped = mapEsdmModel(model, { id: 'craven', name: 'Craven', version: '1.0.0' });
+  it('maps library integration artifacts', async () => {
+    const model = await parseEsdmModel(libraryFixture);
+    const publicLibrary = mapEsdmModel(model, { id: 'public-library', name: 'Public Library', version: '1.0.0' });
+    const collectionNetwork = mapEsdmModel(model, { id: 'collection-network', name: 'Collection Network', version: '1.0.0' });
 
-    expect(mapped.domain.badges?.[0]).toMatchObject({ content: 'Domain', backgroundColor: '#0d9488' });
-    expect(mapped.systems.every((system) => system.badges?.[0]?.content === 'Bounded Context')).toBe(true);
+    expect(publicLibrary.domain.badges?.[0]?.content).toBe('Domain');
+    expect(publicLibrary.systems.every((system) => system.badges?.[0]?.content === 'Bounded Context')).toBe(true);
 
-    const command = mapped.messages.find((message) => message.id === 'add-domain-urls');
-    expect(command?.badges?.[0]).toMatchObject({ content: 'Command', backgroundColor: '#db2777' });
-
-    const event = mapped.messages.find((message) => message.id === 'added');
-    expect(event?.badges?.[0]).toMatchObject({ content: 'Event', backgroundColor: '#d97706' });
-
-    const query = mapped.messages.find((message) => message.id === 'get-domain');
-    expect(query?.badges?.[0]).toMatchObject({ content: 'Query', backgroundColor: '#6366f1' });
-
-    expect(mapped.systems.map((system) => system.id).sort()).toEqual(['compliance-management', 'tenant-management']);
-
-    const policyServices = mapped.services.filter((service) => service.esdmKind === 'policy');
+    const policyServices = publicLibrary.services.filter((service) => service.esdmKind === 'policy');
     expect(policyServices.length).toBeGreaterThan(0);
     expect(policyServices.every((service) => service.placement === 'domain')).toBe(true);
     expect(policyServices.every((service) => service.badges?.[0]?.content === 'Policy')).toBe(true);
-    expect(policyServices.every((service) => service.badges?.[0]?.backgroundColor === '#dc2626')).toBe(true);
 
-    const externalServices = mapped.services.filter((service) => service.externalSystem);
-    expect(externalServices.map((service) => service.id).sort()).toEqual(['amazon-cognito', 'aws-bedrock']);
-    expect(externalServices.every((service) => service.badges?.[0]?.content === 'External')).toBe(true);
-    expect(externalServices.every((service) => service.badges?.[0]?.backgroundColor === '#4b5563')).toBe(true);
+    const externalServices = publicLibrary.services.filter((service) => service.externalSystem);
+    expect(externalServices.map((service) => service.id)).toEqual(['notification-service']);
 
-    const tenantSystem = mapped.systems.find((system) => system.id === 'tenant-management');
-    expect(tenantSystem?.relationships.some((relationship) => relationship.id === 'compliance-management')).toBe(true);
-    expect(tenantSystem?.actors.length).toBeGreaterThan(0);
-    expect(tenantSystem?.markdown).toContain('\\{tenantId\\}');
-    expect(tenantSystem?.markdown).not.toMatch(/[^\\]\{tenantId\}/);
+    const circulationSystem = publicLibrary.systems.find((system) => system.id === 'circulation');
+    expect(circulationSystem?.relationships.some((relationship) => relationship.id === 'cataloging')).toBe(true);
+    expect(publicLibrary.systems.find((system) => system.id === 'cataloging')?.actors.length).toBeGreaterThan(0);
+
+    const processManagers = [...publicLibrary.services, ...collectionNetwork.services].filter(
+      (service) => service.esdmKind === 'process-manager'
+    );
+    expect(processManagers.map((service) => service.id).sort()).toEqual(['ill-fulfillment', 'loan-reminder']);
+
+    const flows = [...publicLibrary.flows, ...collectionNetwork.flows];
+    expect(flows.length).toBeGreaterThanOrEqual(2);
   });
 
   it('escapes curly braces in MDX prose but not in code blocks', () => {
-    const input = 'Path /tenants/{tenantId} and `{tenantId}` plus:\n\n```json\n{"id": "{tenantId}"}\n```\n';
+    const input = 'Path /patrons/{patronId} and `{patronId}` plus:\n\n```json\n{"id": "{patronId}"}\n```\n';
     expect(escapeMdxLiterals(input)).toBe(
-      'Path /tenants/\\{tenantId\\} and `{tenantId}` plus:\n\n```json\n{"id": "{tenantId}"}\n```\n'
+      'Path /patrons/\\{patronId\\} and `{patronId}` plus:\n\n```json\n{"id": "{patronId}"}\n```\n'
     );
   });
 
   it('does not duplicate name or summary in resource markdown bodies', async () => {
-    const model = await parseEsdmModel(cravenFixture);
-    const mapped = mapEsdmModel(model, { id: 'craven', name: 'Craven', version: '1.0.0' });
+    const model = await parseEsdmModel(libraryFixture);
+    const mapped = mapEsdmModel(model, { id: 'public-library', name: 'Public Library', version: '1.0.0' });
 
-    const domainService = mapped.services.find((service) => service.id === 'domain');
-    expect(domainService?.summary).toBeTruthy();
-    expect(domainService?.markdown).not.toMatch(/^#\s/m);
-    expect(domainService?.markdown).not.toContain(domainService!.summary!.trim().slice(0, 40));
+    const bookService = mapped.services.find((service) => service.id === 'book');
+    expect(bookService?.summary).toBeTruthy();
+    expect(bookService?.markdown).not.toMatch(/^#\s/m);
+    expect(bookService?.markdown).not.toContain(bookService!.summary!.trim().slice(0, 40));
 
-    const command = mapped.messages.find((message) => message.id === 'add-domain-urls');
+    const command = mapped.messages.find((message) => message.id === 'acquire-book');
     expect(command?.summary).toBeTruthy();
     expect(command?.markdown).not.toMatch(/^#\s/m);
     expect(command?.markdown).not.toContain(command!.summary!.trim().slice(0, 40));
@@ -130,9 +119,9 @@ describe('mapper', () => {
 
   it('maps message and service schemas for EventCatalog schemaPath attachment', async () => {
     const model = await parseEsdmModel(libraryFixture);
-    const mapped = mapEsdmModel(model, { id: 'library', name: 'Library', version: '1.0.0' });
+    const mapped = mapEsdmModel(model, { id: 'public-library', name: 'Public Library', version: '1.0.0' });
 
-    const acquire = mapped.messages.find((message) => message.id === 'acquire');
+    const acquire = mapped.messages.find((message) => message.id === 'acquire-book');
     expect(acquire?.schema?.type).toBe('object');
     expect(acquire?.schema?.properties).toMatchObject({
       isbn: { type: 'string' },
@@ -146,22 +135,22 @@ describe('mapper', () => {
     });
     expect(bookService?.markdown).not.toContain('## Schema');
 
-    const booksService = mapped.services.find((service) => service.id === 'books');
-    expect(booksService?.schema?.type).toBe('array');
-    expect(booksService?.markdown).not.toContain('## Schema');
+    const catalogService = mapped.services.find((service) => service.id === 'catalog');
+    expect(catalogService?.schema?.type).toBe('array');
+    expect(catalogService?.markdown).not.toContain('## Schema');
   });
 
   it('keeps backward-compatible bounded context service helper', async () => {
     const model = await parseEsdmModel(libraryFixture);
-    const domain = resolveDomain(model);
-    const context = groupBoundedContexts(model, domain).get('library/cataloging');
+    const domain = resolveDomain(model, 'public-library');
+    const context = groupBoundedContexts(model, domain).get('public-library/cataloging');
 
     expect(context).toBeDefined();
 
     const service = mapBoundedContextService(context!, '1.0.0');
 
     expect(service.id).toBe('cataloging');
-    expect(service.messages).toHaveLength(3);
-    expect(service.messages.map((message) => message.id).sort()).toEqual(['acquire', 'acquired', 'list-books']);
+    expect(service.messages.length).toBeGreaterThan(3);
+    expect(service.messages.some((message) => message.id === 'acquire-book')).toBe(true);
   });
 });

@@ -1,0 +1,41 @@
+apiVersion: schema.esdm.io/core/v1
+kind: aggregate
+name: conservation-project
+description: >
+  Planned conservation work for one or more collection items, from intake survey through
+  completion sign-off.
+scope:
+  domain: collection-network
+  boundedContext: preservation
+identifiedBy:
+  source: state
+  field: project-id
+state:
+  type: object
+  required: [project-id, title, status, condition-grade, opened-at]
+  properties:
+    project-id:
+      type: string
+      format: uuid
+    title:
+      type: string
+    status:
+      type: string
+      enum: [planned, in-progress, completed, canceled]
+    condition-grade:
+      type: string
+      enum: [excellent, good, fair, poor]
+    item-barcodes:
+      type: array
+      items:
+        type: string
+    opened-at:
+      type: string
+      format: date-time
+    target-completion-at:
+      type: string
+      format: date
+invariants:
+  - name: items-not-on-loan
+    rule: >
+      Items referenced by item-barcodes must not be on loan when start-project is accepted.

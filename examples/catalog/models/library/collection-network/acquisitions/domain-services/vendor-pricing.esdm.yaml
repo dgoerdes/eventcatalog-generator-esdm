@@ -1,0 +1,38 @@
+apiVersion: schema.esdm.io/core/v1
+kind: domain-service
+name: vendor-pricing
+description: >
+  Resolves current unit price and availability for an ISBN from vendor catalogs before
+  a purchase order line is added.
+scope:
+  domain: collection-network
+  boundedContext: acquisitions
+functions:
+  - name: quote-line
+    description: Return vendor price and estimated ship date for one ISBN and quantity.
+    arguments:
+      type: object
+      required: [vendor-id, isbn, quantity]
+      properties:
+        vendor-id:
+          type: string
+        isbn:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+    returns:
+      type: object
+      required: [available, unit-price-cents]
+      properties:
+        available:
+          type: boolean
+        unit-price-cents:
+          type: integer
+        estimated-ship-days:
+          type: integer
+    rules:
+      - name: educator-discount
+        rule: >
+          When the order is tagged for educator collections, apply the contracted discount
+          percentage before returning unit-price-cents.

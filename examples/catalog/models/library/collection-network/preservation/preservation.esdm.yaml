@@ -1,0 +1,13 @@
+apiVersion: schema.esdm.io/core/v1
+kind: bounded-context
+name: preservation
+description: >
+  Conservation planning for fragile or rare materials — project tracking, condition
+  surveys, and routing items to the conservation lab.
+scope:
+  domain: collection-network
+ubiquitousLanguage:
+  - term: Conservation project
+    definition: Planned work to stabilize or repair one or more collection items.
+  - term: Condition grade
+    definition: Standardized rating from excellent through poor used to prioritize work.

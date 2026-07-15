@@ -1,0 +1,14 @@
+apiVersion: schema.esdm.io/core/v1
+kind: context-mapping
+name: open-library-metadata
+description: >
+  acquisitions and cataloging consume ISBN metadata through an anti-corruption layer over
+  the Open Library API. External identifiers and raw JSON shapes never appear in domain
+  commands.
+type: anti-corruption-layer
+downstream:
+  domain: collection-network
+  boundedContext: acquisitions
+upstream:
+  domain: collection-network
+  externalSystem: open-library-api

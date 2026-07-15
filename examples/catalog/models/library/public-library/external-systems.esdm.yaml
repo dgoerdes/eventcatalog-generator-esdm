@@ -1,0 +1,15 @@
+apiVersion: schema.esdm.io/core/v1
+kind: external-system
+name: notification-service
+description: >
+  Transactional email provider for patron-facing notifications — due-date reminders,
+  hold-ready alerts, and welcome messages after enrollment. The library owns message
+  content and recipient selection; the provider owns delivery and bounce handling.
+scope:
+  domain: public-library
+direction: outbound
+category: mail
+capabilities:
+  - Send templated email to a patron address
+  - Track delivery status and hard bounces
+  - Suppress sends to unsubscribed addresses

@@ -1,0 +1,67 @@
+apiVersion: schema.esdm.io/core/v1
+kind: event-handler
+name: ill-pickup-notification
+description: >
+  Notifies the patron when an inter-library loan item arrives at the hold shelf.
+scope:
+  domain: collection-network
+deliveryGuarantee: at-least-once
+idempotency:
+  owner: self
+  strategy: Skip when request-id was already notified.
+handles:
+  - boundedContext: inter-library-loan
+    event: ill-pickup-ready
+sideEffects:
+  - type: other
+    rule: >
+      Resolve patron email from public-library membership and send hold-ready template via
+      the notification-service ACL in the public-library domain.
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event-handler
+name: metadata-cache-warmup
+description: >
+  Caches Open Library metadata after acquisitions staff preview a quote, reducing API calls
+  during bulk receiving.
+scope:
+  domain: collection-network
+deliveryGuarantee: at-most-once
+idempotency:
+  owner: not-required
+handles:
+  - boundedContext: acquisitions
+    aggregate: purchase-order
+    event: order-created
+sideEffects:
+  - type: external-call
+    externalSystem: open-library-api
+    rule: >
+      For each distinct isbn on the order, fetch bibliographic metadata and store in the
+      local cache used by isbn-enricher in cataloging.
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: event-handler
+name: ingest-acquired-shipment
+description: >
+  When acquisitions receives a shipment, ingest new titles into public-library cataloging
+  and register barcodes as copies via the acquisitions-feeds-catalog context mapping.
+scope:
+  domain: collection-network
+deliveryGuarantee: at-least-once
+idempotency:
+  owner: self
+  strategy: >
+    Dedupe by order-id + isbn + barcode set from shipment-received before invoking the
+    catalog anti-corruption layer.
+handles:
+  - boundedContext: acquisitions
+    aggregate: purchase-order
+    event: shipment-received
+sideEffects:
+  - type: other
+    rule: >
+      For each item in the shipment payload, call acquire-book when the ISBN is new, then
+      call add-copy for every barcode in public-library cataloging.

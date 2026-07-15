@@ -1,0 +1,52 @@
+apiVersion: schema.esdm.io/core/v1
+kind: aggregate
+name: purchase-order
+description: >
+  Vendor purchase order with line items, expected delivery date, and fulfillment status.
+scope:
+  domain: collection-network
+  boundedContext: acquisitions
+identifiedBy:
+  source: state
+  field: order-id
+state:
+  type: object
+  required: [order-id, vendor-id, status, created-at, lines]
+  properties:
+    order-id:
+      type: string
+      format: uuid
+    vendor-id:
+      type: string
+    status:
+      type: string
+      enum: [draft, submitted, partially-received, received, canceled]
+    created-at:
+      type: string
+      format: date-time
+    expected-delivery-at:
+      type: string
+      format: date
+    lines:
+      type: array
+      minItems: 1
+      items:
+        type: object
+        required: [line-id, isbn, quantity, unit-price-cents]
+        properties:
+          line-id:
+            type: string
+          isbn:
+            type: string
+          quantity:
+            type: integer
+            minimum: 1
+          quantity-received:
+            type: integer
+            minimum: 0
+          unit-price-cents:
+            type: integer
+            minimum: 0
+invariants:
+  - name: received-not-exceed-ordered
+    rule: quantity-received on each line must never exceed quantity.

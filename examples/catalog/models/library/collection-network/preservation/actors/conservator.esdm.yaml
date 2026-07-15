@@ -1,0 +1,12 @@
+apiVersion: schema.esdm.io/core/v1
+kind: actor
+name: conservator
+description: >
+  Conservation lab staff who survey condition, perform treatments, and sign off completed work.
+scope:
+  domain: collection-network
+  boundedContext: preservation
+type: human
+responsibilities:
+  - Plan and execute conservation treatments
+  - Sign off completed preservation projects

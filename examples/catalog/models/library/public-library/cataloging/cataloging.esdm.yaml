@@ -1,0 +1,18 @@
+apiVersion: schema.esdm.io/core/v1
+kind: bounded-context
+name: cataloging
+description: >
+  Bibliographic catalog — titles, authors, subjects, and physical copy inventory.
+  Librarians acquire new records, attach copies, and withdraw outdated editions.
+scope:
+  domain: public-library
+ubiquitousLanguage:
+  - term: Title
+    definition: A bibliographic work identified primarily by ISBN, independent of physical copies.
+    avoid:
+      - term: Book
+        reason: Ambiguous — use Title for metadata and Copy for a lendable physical item.
+  - term: Copy
+    definition: One physical item on the shelf, barcoded and linked to exactly one Title.
+  - term: Withdraw
+    definition: Remove a Title or Copy from active circulation because it is lost, damaged beyond repair, or weeded.

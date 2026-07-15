@@ -1,0 +1,21 @@
+apiVersion: schema.esdm.io/core/v1
+kind: value-object
+name: money
+description: >
+  Monetary amount in minor currency units (cents) with ISO 4217 currency code.
+scope:
+  domain: collection-network
+  boundedContext: acquisitions
+schema:
+  type: object
+  required: [amount-cents, currency]
+  properties:
+    amount-cents:
+      type: integer
+      minimum: 0
+    currency:
+      type: string
+      enum: [USD, EUR, GBP]
+invariants:
+  - name: whole-minor-units
+    rule: amount-cents must be an integer; fractional cents are not representable.

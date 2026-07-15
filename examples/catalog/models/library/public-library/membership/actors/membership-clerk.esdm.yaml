@@ -1,0 +1,26 @@
+apiVersion: schema.esdm.io/core/v1
+kind: actor
+name: membership-clerk
+description: >
+  Staff who enroll new patrons, adjust tiers, and manage suspensions at the membership desk.
+scope:
+  domain: public-library
+  boundedContext: membership
+type: human
+responsibilities:
+  - Enroll patrons and issue library cards
+  - Suspend or reactivate patron accounts
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: actor
+name: self-service-patron
+description: >
+  Patron enrolling through the online portal; subject to the same enrollment rules as
+  desk enrollment but authenticated via email verification only.
+scope:
+  domain: public-library
+  boundedContext: membership
+type: human
+responsibilities:
+  - Self-enroll through the patron portal

@@ -1,0 +1,15 @@
+apiVersion: schema.esdm.io/core/v1
+kind: external-system
+name: open-library-api
+description: >
+  Open Library public API for ISBN metadata lookup — title, author list, publish year,
+  and cover image URL. Used during cataloging to enrich records before a librarian
+  reviews and publishes them. No write access; rate limits apply per API key.
+scope:
+  domain: collection-network
+direction: outbound
+category: metadata
+capabilities:
+  - Lookup bibliographic record by ISBN-10 or ISBN-13
+  - Return normalized author names and edition details
+  - Provide cover art URL when available

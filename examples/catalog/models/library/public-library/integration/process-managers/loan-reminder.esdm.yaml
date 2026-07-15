@@ -1,0 +1,81 @@
+apiVersion: schema.esdm.io/core/v1
+kind: process-manager
+name: loan-reminder
+description: >
+  Coordinates due-date reminder emails for open loans. One instance per loan-id arms a timer
+  three days before due-at and emits loan-reminder-due for the notification handler.
+scope:
+  domain: public-library
+deliveryGuarantee: at-least-once
+idempotency:
+  owner: self
+  strategy: >
+    Instance keyed by loan-id ignores duplicate checked-out events; timer firings dedupe on
+    loan-id + scheduledAt.
+correlatedBy:
+  source: event-field
+  field: loan-id
+state:
+  type: object
+  required: [loan-id, patron-id, due-at, reminder-scheduled-at, status]
+  properties:
+    loan-id:
+      type: string
+    patron-id:
+      type: string
+    due-at:
+      type: string
+      format: date-time
+    reminder-scheduled-at:
+      type: string
+      format: date-time
+    status:
+      type: string
+      enum: [active, completed, canceled]
+invariants:
+  - name: reminder-before-due
+    rule: reminder-scheduled-at must be exactly three calendar days before due-at at 09:00 local.
+startsWhen:
+  - boundedContext: circulation
+    aggregate: loan
+    event: checked-out
+endsWhen:
+  - name: loan-closed
+    condition: state.status is completed or canceled
+timers:
+  - name: reminder
+    description: Fires three days before due-at to trigger the reminder email.
+    at: reminder-scheduled-at
+reactions:
+  - when:
+      boundedContext: circulation
+      aggregate: loan
+      event: checked-out
+    rule: >
+      Create instance with loan-id, patron-id, due-at from the event. Set reminder-scheduled-at
+      to three days before due-at. Arm the reminder timer. Set status active.
+    setTimers:
+      - reminder
+  - when:
+      boundedContext: circulation
+      aggregate: loan
+      event: loan-renewed
+    rule: >
+      Cancel the existing reminder timer, update due-at and reminder-scheduled-at from the
+      event, re-arm reminder.
+    cancelTimers:
+      - reminder
+    setTimers:
+      - reminder
+  - when:
+      boundedContext: circulation
+      aggregate: loan
+      event: checked-in
+    rule: Cancel reminder timer and set status completed.
+    cancelTimers:
+      - reminder
+  - when:
+      timer: reminder
+    rule: >
+      Emit loan-reminder-due with loan-id, patron-id, isbn, and due-at from instance state.
+      Set status completed after emission.

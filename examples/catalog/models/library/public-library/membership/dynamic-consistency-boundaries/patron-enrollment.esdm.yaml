@@ -1,0 +1,23 @@
+apiVersion: schema.esdm.io/core/v1
+kind: dynamic-consistency-boundary
+name: patron-enrollment
+description: >
+  Consistency unit for enrolling a new patron. One enroll-patron decision atomically
+  assigns patron-id, mints a card number, and establishes the initial profile stream.
+scope:
+  domain: public-library
+  boundedContext: membership
+identifiedBy:
+  - name: email
+    source: command-payload
+    field: email
+consults:
+  - boundedContext: membership
+    event: patron-enrolled
+    criteria: >
+      No prior patron-enrolled whose email equals the command email (global uniqueness).
+invariants:
+  - name: email-unique
+    rule: email must not belong to an active or suspended patron.
+  - name: card-number-unique
+    rule: Generated card-number must not collide with any existing patron stream.

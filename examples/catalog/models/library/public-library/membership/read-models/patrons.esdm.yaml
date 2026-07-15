@@ -1,0 +1,43 @@
+apiVersion: schema.esdm.io/core/v1
+kind: read-model
+name: patrons
+description: >
+  Staff lookup of patron profiles by card number, email, or name prefix for desk service.
+scope:
+  domain: public-library
+  boundedContext: membership
+paradigm: tabular
+schema:
+  type: array
+  items:
+    type: object
+    required: [patron-id, display-name, card-number, status, tier]
+    properties:
+      patron-id:
+        type: string
+      display-name:
+        type: string
+      email:
+        type: string
+      card-number:
+        type: string
+      status:
+        type: string
+      tier:
+        type: string
+      max-open-loans:
+        type: integer
+      fine-balance-cents:
+        type: integer
+projections:
+  - boundedContext: membership
+    event: patron-enrolled
+    rule: Insert row with patron-id, display-name, email, card-number, tier, status active.
+  - boundedContext: membership
+    aggregate: patron
+    event: patron-suspended
+    rule: Set status to suspended on matching patron-id.
+  - boundedContext: membership
+    aggregate: patron
+    event: patron-reactivated
+    rule: Set status to active when fines are cleared.

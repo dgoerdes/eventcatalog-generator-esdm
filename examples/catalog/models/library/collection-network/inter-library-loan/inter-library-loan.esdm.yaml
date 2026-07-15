@@ -1,0 +1,15 @@
+apiVersion: schema.esdm.io/core/v1
+kind: bounded-context
+name: inter-library-loan
+description: >
+  Borrowing materials from partner libraries for local patrons. Tracks request lifecycle
+  from placement through shipping, patron pickup, and return to the lending library.
+scope:
+  domain: collection-network
+ubiquitousLanguage:
+  - term: ILL request
+    definition: A request to borrow a title not held locally from a partner institution.
+  - term: Lending library
+    definition: The partner that ships the item; identified by OCLC symbol.
+  - term: Due back
+    definition: Date by which the item must be returned to the lending library.

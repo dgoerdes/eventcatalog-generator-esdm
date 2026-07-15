@@ -52,26 +52,26 @@ module.exports = {
       {
         models: [
           {
-            path: path.join(__dirname, 'models/craven'),
+            path: path.join(__dirname, 'models/library'),
             version: '1.0.0',
           },
         ],
         domain: {
-          id: 'craven',
-          name: 'Craven',
+          id: 'public-library',
+          name: 'Public Library',
           version: '1.0.0',
         },
         systems: [
           {
-            boundedContext: 'tenant-management',
-            name: 'Tenant Management',
+            boundedContext: 'cataloging',
+            name: 'Cataloging',
           },
         ],
         units: [
           {
-            boundedContext: 'tenant-management',
-            unit: 'tenant',
-            name: 'Tenant Aggregate',
+            boundedContext: 'cataloging',
+            unit: 'book',
+            name: 'Book Aggregate',
           },
         ],
         debug: true,
@@ -107,14 +107,14 @@ npm run generate -- debug
 
 ## Try it locally (EventCatalog CE)
 
-This repo includes a runnable EventCatalog Community Edition project under `examples/catalog/`. It uses the local plugin via `file:../..` and the Craven ESDM model as a real-world example.
+This repo includes a runnable EventCatalog Community Edition project under `examples/catalog/`. It uses the local plugin via `file:../..` and the Library Network ESDM model as a real-world example.
 
 ```bash
 npm install
 npm run catalog:demo
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — you should see the **Craven** domain, **Tenant Management** and **Compliance Management** systems, consistency-unit services, integration services, and external systems.
+Open [http://localhost:3000](http://localhost:3000) — you should see the **Public Library** and **Collection Network** domains with their bounded-context systems, consistency-unit services, integration services, and external systems.
 
 **Requires Node.js >= 22.12.0** (current EventCatalog / Astro requirement).
 
@@ -126,12 +126,15 @@ See [examples/catalog/README.md](examples/catalog/README.md) for step-by-step co
 npm install
 npm test
 npm run build
+npm run esdm:lint
 ```
 
-The `src/test/fixtures/library` directory contains the [ESDM first-model tutorial](https://www.esdm.io/getting-started/your-first-model/) as test fixtures. The bundled `src/test/esdm` binary can lint fixtures locally:
+The `examples/catalog/models/library` directory contains the Library Network example model. Lint it with the bundled ESDM CLI in `esdm/`:
 
 ```bash
-./src/test/esdm lint -d src/test/fixtures/library
+npm run esdm:lint
+# or directly:
+./esdm/esdm lint -d examples/catalog/models/library
 ```
 
 ## TODO:

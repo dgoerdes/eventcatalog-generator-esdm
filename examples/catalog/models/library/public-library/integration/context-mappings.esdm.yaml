@@ -1,0 +1,79 @@
+apiVersion: schema.esdm.io/core/v1
+kind: context-mapping
+name: circulation-consults-catalog
+description: >
+  circulation checks cataloging for title metadata and copy availability before
+  check-out. Cataloging is the supplier of bibliographic truth; circulation references
+  books and copies by ID only and never mutates catalog records.
+type: customer-supplier
+customer:
+  domain: public-library
+  boundedContext: circulation
+supplier:
+  domain: public-library
+  boundedContext: cataloging
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: context-mapping
+name: circulation-consults-membership
+description: >
+  circulation verifies patron standing (active, not suspended, within loan limits)
+  before issuing a loan. membership is the supplier of patron eligibility; circulation
+  stores only patron-id on the loan aggregate.
+type: customer-supplier
+customer:
+  domain: public-library
+  boundedContext: circulation
+supplier:
+  domain: public-library
+  boundedContext: membership
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: context-mapping
+name: patron-notifications
+description: >
+  Anti-corruption layer between domain events and the notification-service provider.
+  Event handlers translate patron-registered, hold-ready, and due-date-reminder triggers
+  into provider-specific template IDs and payload shapes without leaking provider
+  concepts into commands or aggregates.
+type: anti-corruption-layer
+downstream:
+  domain: public-library
+  boundedContext: membership
+upstream:
+  domain: public-library
+  externalSystem: notification-service
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: context-mapping
+name: acquisitions-feeds-catalog
+description: >
+  When acquisitions receives a shipment, a domain policy emits acquire-book into
+  cataloging so new titles appear in the public catalog. acquisitions owns purchase
+  workflow; cataloging owns bibliographic records.
+type: customer-supplier
+customer:
+  domain: public-library
+  boundedContext: cataloging
+supplier:
+  domain: collection-network
+  boundedContext: acquisitions
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: context-mapping
+name: ill-handoff-to-circulation
+description: >
+  When an inter-library loan item arrives for a patron, inter-library-loan emits a
+  BC-scoped item-ready-for-pickup event that circulation consumes to create a
+  short-term loan record at the local desk.
+type: customer-supplier
+customer:
+  domain: public-library
+  boundedContext: circulation
+supplier:
+  domain: collection-network
+  boundedContext: inter-library-loan

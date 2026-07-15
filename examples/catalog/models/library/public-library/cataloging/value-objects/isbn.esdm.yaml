@@ -1,0 +1,22 @@
+apiVersion: schema.esdm.io/core/v1
+kind: value-object
+name: isbn
+description: >
+  Normalized ISBN value with optional hyphen formatting stripped. Used in command payloads
+  and cross-context references where a bare string would lose validation rules.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+schema:
+  type: object
+  required: [value]
+  properties:
+    value:
+      type: string
+      pattern: "^97[89][0-9]{10}$"
+    hyphenated:
+      type: string
+      description: Human-readable form for labels; derived, never authoritative.
+invariants:
+  - name: checksum
+    rule: value must satisfy ISBN-13 check digit algorithm.

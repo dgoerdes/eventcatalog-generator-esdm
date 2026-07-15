@@ -1,0 +1,54 @@
+apiVersion: schema.esdm.io/core/v1
+kind: aggregate
+name: book
+description: >
+  Bibliographic record for one title. Holds normalized metadata and publication status.
+  Physical inventory is tracked on separate book-copy streams keyed under the same ISBN.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+identifiedBy:
+  source: state
+  field: isbn
+state:
+  type: object
+  required: [isbn, title, authors, status, acquired-at]
+  properties:
+    isbn:
+      type: string
+      description: Canonical ISBN-13 for this title.
+    title:
+      type: string
+      minLength: 1
+    authors:
+      type: array
+      minItems: 1
+      items:
+        type: object
+        required: [name]
+        properties:
+          name:
+            type: string
+          author-id:
+            type: string
+            format: uuid
+    publishYear:
+      type: integer
+      minimum: 1000
+    subjects:
+      type: array
+      items:
+        type: string
+    status:
+      type: string
+      enum: [active, withdrawn]
+    acquired-at:
+      type: string
+      format: date-time
+invariants:
+  - name: isbn-checksum-valid
+    rule: isbn must pass ISBN-13 checksum validation before acquire-book is accepted.
+  - name: withdrawn-has-no-active-copies
+    rule: >
+      withdraw-book is rejected while any copy under this ISBN remains in status
+      available or on-loan.

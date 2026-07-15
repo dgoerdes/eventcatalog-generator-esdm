@@ -1,0 +1,78 @@
+apiVersion: schema.esdm.io/core/v1
+kind: process-manager
+name: ill-fulfillment
+description: >
+  Coordinates inter-library loan fulfillment from partner shipment through patron pickup
+  and return deadline enforcement. One instance per request-id drives pickup notifications
+  and overdue escalation to the ILL coordinator.
+scope:
+  domain: collection-network
+deliveryGuarantee: at-least-once
+idempotency:
+  owner: self
+  strategy: Instance keyed by request-id; duplicate item-shipped events are ignored.
+correlatedBy:
+  source: event-field
+  field: request-id
+state:
+  type: object
+  required: [request-id, patron-id, isbn, status]
+  properties:
+    request-id:
+      type: string
+    patron-id:
+      type: string
+    isbn:
+      type: string
+    barcode:
+      type: string
+    due-back-at:
+      type: string
+      format: date-time
+    status:
+      type: string
+      enum: [awaiting-shipment, at-desk, with-patron, overdue, completed]
+startsWhen:
+  - boundedContext: inter-library-loan
+    aggregate: ill-request
+    event: ill-requested
+endsWhen:
+  - name: request-completed
+    condition: state.status is completed
+timers:
+  - name: return-deadline
+    description: Fires on due-back-at to flag overdue returns to the coordinator.
+    at: due-back-at
+reactions:
+  - when:
+      boundedContext: inter-library-loan
+      aggregate: ill-request
+      event: ill-requested
+    rule: >
+      Create instance with request-id, patron-id, isbn from the event. Set status
+      awaiting-shipment.
+  - when:
+      boundedContext: inter-library-loan
+      aggregate: ill-request
+      event: item-shipped
+    rule: >
+      Update barcode and due-back-at from the event. Set status at-desk. Arm return-deadline
+      timer. Emit ill-pickup-ready for circulation handoff.
+    setTimers:
+      - return-deadline
+  - when:
+      timer: return-deadline
+    rule: >
+      If status is still with-patron, set status overdue and emit escalate-ill-overdue
+      command for staff follow-up.
+    emits:
+      - boundedContext: inter-library-loan
+        aggregate: ill-request
+        command: flag-overdue-return
+  - when:
+      boundedContext: inter-library-loan
+      aggregate: ill-request
+      event: ill-completed
+    rule: Cancel return-deadline timer and set status completed.
+    cancelTimers:
+      - return-deadline

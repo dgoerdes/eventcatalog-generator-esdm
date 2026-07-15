@@ -1,0 +1,28 @@
+apiVersion: schema.esdm.io/core/v1
+kind: entity
+name: author
+description: >
+  A person or corporate body credited with writing a title. Referenced from book metadata
+  and patron-reading-history projections; not a consistency unit on its own.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+identifiedBy:
+  source: schema
+  field: author-id
+schema:
+  type: object
+  required: [author-id, display-name]
+  properties:
+    author-id:
+      type: string
+      format: uuid
+    display-name:
+      type: string
+      minLength: 1
+    sortName:
+      type: string
+      description: "Family-name-first form for shelf labels, e.g. \"Austen, Jane\"."
+invariants:
+  - name: display-name-non-empty
+    rule: display-name must contain at least one non-whitespace character after trimming.

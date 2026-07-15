@@ -1,0 +1,47 @@
+apiVersion: schema.esdm.io/core/v1
+kind: aggregate
+name: patron
+description: >
+  Long-lived patron profile — contact details, membership tier, suspension state, and
+  fine balance. Card numbers are issued at enrollment via the patron-enrollment DCB.
+scope:
+  domain: public-library
+  boundedContext: membership
+identifiedBy:
+  source: state
+  field: patron-id
+state:
+  type: object
+  required: [patron-id, display-name, email, card-number, tier, status, enrolled-at]
+  properties:
+    patron-id:
+      type: string
+      format: uuid
+    display-name:
+      type: string
+    email:
+      type: string
+      format: email
+    card-number:
+      type: string
+      pattern: "^[0-9]{9}$"
+    tier:
+      type: string
+      enum: [standard, educator, senior]
+    status:
+      type: string
+      enum: [active, suspended, closed]
+    max-open-loans:
+      type: integer
+      minimum: 1
+    fine-balance-cents:
+      type: integer
+      minimum: 0
+    enrolled-at:
+      type: string
+      format: date-time
+invariants:
+  - name: suspended-blocks-borrowing
+    rule: Patrons in status suspended may not be reported as eligible by circulation queries.
+  - name: fine-cap
+    rule: fine-balance-cents above the tier threshold forces automatic suspension.

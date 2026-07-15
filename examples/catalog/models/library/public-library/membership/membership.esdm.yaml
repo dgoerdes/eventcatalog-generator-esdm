@@ -1,0 +1,15 @@
+apiVersion: schema.esdm.io/core/v1
+kind: bounded-context
+name: membership
+description: >
+  Patron registry — enrollment, card issuance, suspension, and loan-limit tiers.
+  Source of truth for whether a person may borrow materials.
+scope:
+  domain: public-library
+ubiquitousLanguage:
+  - term: Patron
+    definition: A registered library member identified by patron-id and linked to a library card number.
+  - term: Suspension
+    definition: Temporary block on borrowing due to unpaid fines or policy violation; distinct from account closure.
+  - term: Loan limit
+    definition: Maximum concurrent open loans allowed for a patron tier.

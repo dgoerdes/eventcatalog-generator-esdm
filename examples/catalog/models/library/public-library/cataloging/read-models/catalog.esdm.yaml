@@ -1,0 +1,53 @@
+apiVersion: schema.esdm.io/core/v1
+kind: read-model
+name: catalog
+description: >
+  Searchable catalog of active titles with copy counts. Powers the OPAC search and
+  librarian inventory screens.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+paradigm: tabular
+schema:
+  type: array
+  items:
+    type: object
+    required: [isbn, title, authors, available-copies, status]
+    properties:
+      isbn:
+        type: string
+      title:
+        type: string
+      authors:
+        type: array
+        items:
+          type: string
+      publishYear:
+        type: integer
+      available-copies:
+        type: integer
+        minimum: 0
+      status:
+        type: string
+        enum: [active, withdrawn]
+projections:
+  - boundedContext: cataloging
+    aggregate: book
+    event: book-acquired
+    rule: >
+      Upsert a row keyed by isbn with title, authors, publishYear, status active,
+      available-copies 0.
+  - boundedContext: cataloging
+    aggregate: book
+    event: book-withdrawn
+    rule: Set status to withdrawn on the matching isbn row.
+  - boundedContext: cataloging
+    aggregate: book-copy
+    event: copy-added
+    rule: Increment available-copies when the new copy status is available.
+  - boundedContext: cataloging
+    aggregate: book-copy
+    event: copy-status-changed
+    rule: >
+      Adjust available-copies when status crosses the available boundary (e.g. on-loan
+      decrements, return-to-available increments).

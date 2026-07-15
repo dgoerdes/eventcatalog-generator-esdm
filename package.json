@@ -29,7 +29,8 @@
     "catalog:clean": "rm -rf examples/catalog/domains examples/catalog/services examples/catalog/events examples/catalog/commands examples/catalog/queries examples/catalog/flows examples/catalog/public/ai",
     "catalog:generate": "npm run build && npm run generate --prefix examples/catalog",
     "catalog:dev": "npm run dev --prefix examples/catalog",
-    "catalog:demo": "npm run catalog:install && npm run catalog:generate && npm run catalog:dev"
+    "catalog:demo": "npm run catalog:install && npm run catalog:generate && npm run catalog:dev",
+    "esdm:lint": "./esdm/esdm lint -d ./examples/catalog/models/library"
   },
   "keywords": [
     "eventcatalog",

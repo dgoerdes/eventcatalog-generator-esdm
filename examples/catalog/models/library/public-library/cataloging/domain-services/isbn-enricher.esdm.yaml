@@ -1,0 +1,42 @@
+apiVersion: schema.esdm.io/core/v1
+kind: domain-service
+name: isbn-enricher
+description: >
+  Stateless operation that calls the Open Library API (via anti-corruption layer in
+  acquisitions) or a cached metadata store to suggest title, authors, and publish year
+  for a given ISBN before a librarian confirms acquire-book.
+scope:
+  domain: public-library
+  boundedContext: cataloging
+functions:
+  - name: lookup-metadata
+    description: Return suggested bibliographic fields for one ISBN.
+    arguments:
+      type: object
+      required: [isbn]
+      properties:
+        isbn:
+          type: string
+    returns:
+      type: object
+      required: [found]
+      properties:
+        found:
+          type: boolean
+        title:
+          type: string
+        authors:
+          type: array
+          items:
+            type: string
+        publishYear:
+          type: integer
+    rules:
+      - name: cache-first
+        rule: >
+          Consult local metadata cache before calling the external API; cache hits must
+          not count against the provider rate limit.
+      - name: partial-ok
+        rule: >
+          When the provider returns title without authors, still return found true with
+          empty authors — the cataloger completes the record manually.

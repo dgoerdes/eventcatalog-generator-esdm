@@ -1,0 +1,19 @@
+apiVersion: schema.esdm.io/core/v1
+kind: domain
+name: public-library
+description: >
+  Patron-facing library operations: building and searching the catalog, circulating
+  physical copies, and managing patron membership. This domain owns what happens at
+  the service desk and in the online patron portal.
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: subdomain
+name: patron-services
+scope:
+  domain: public-library
+type: core
+boundedContexts:
+  - cataloging
+  - circulation
+  - membership

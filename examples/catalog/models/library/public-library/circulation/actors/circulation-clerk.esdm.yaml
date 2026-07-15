@@ -1,0 +1,13 @@
+apiVersion: schema.esdm.io/core/v1
+kind: actor
+name: circulation-clerk
+description: >
+  Front-desk staff who checks items in and out, processes renewals, and releases holds
+  when copies return.
+scope:
+  domain: public-library
+  boundedContext: circulation
+type: human
+responsibilities:
+  - Check out and check in physical copies
+  - Renew loans when policy allows

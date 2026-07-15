@@ -1,0 +1,42 @@
+apiVersion: schema.esdm.io/core/v1
+kind: policy
+name: sync-copy-on-checkout
+description: >
+  When circulation checks out a copy, cataloging must mark the copy as on-loan so the OPAC
+  reflects reduced availability. Keeps catalog copy status eventually consistent with loans.
+scope:
+  domain: public-library
+deliveryGuarantee: at-least-once
+idempotency:
+  owner: self
+  strategy: Skip when the same CloudEvents id was already processed.
+handles:
+  - boundedContext: circulation
+    aggregate: loan
+    event: checked-out
+emits:
+  - boundedContext: cataloging
+    aggregate: book-copy
+    command: mark-copy-on-loan
+
+---
+apiVersion: schema.esdm.io/core/v1
+kind: policy
+name: sync-copy-on-checkin
+description: >
+  When a loan closes, restore catalog copy status to available unless a hold queue requires
+  routing to the holds shelf instead.
+scope:
+  domain: public-library
+deliveryGuarantee: at-least-once
+idempotency:
+  owner: self
+  strategy: Skip duplicate CloudEvents ids; mark-copy-available is safe to retry.
+handles:
+  - boundedContext: circulation
+    aggregate: loan
+    event: checked-in
+emits:
+  - boundedContext: cataloging
+    aggregate: book-copy
+    command: mark-copy-available

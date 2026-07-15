@@ -1,0 +1,44 @@
+apiVersion: schema.esdm.io/core/v1
+kind: aggregate
+name: loan
+description: >
+  One active or historical lending of a physical copy to a patron. State tracks due date,
+  renewal count, and whether the loan is open or closed.
+scope:
+  domain: public-library
+  boundedContext: circulation
+identifiedBy:
+  source: state
+  field: loan-id
+state:
+  type: object
+  required: [loan-id, patron-id, barcode, isbn, checked-out-at, due-at, status]
+  properties:
+    loan-id:
+      type: string
+      format: uuid
+    patron-id:
+      type: string
+      format: uuid
+    barcode:
+      type: string
+    isbn:
+      type: string
+    checked-out-at:
+      type: string
+      format: date-time
+    due-at:
+      type: string
+      format: date-time
+    renewal-count:
+      type: integer
+      minimum: 0
+      default: 0
+    status:
+      type: string
+      enum: [open, closed, overdue]
+invariants:
+  - name: one-open-loan-per-copy
+    rule: At most one open loan may exist for a given barcode at any time.
+  - name: due-after-checkout
+    rule: due-at must be strictly after checked-out-at.

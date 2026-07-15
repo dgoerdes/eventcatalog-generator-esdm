@@ -1,0 +1,41 @@
+apiVersion: schema.esdm.io/core/v1
+kind: read-model
+name: ill-pipeline
+description: >
+  Operations dashboard of in-flight ILL requests grouped by status for the ILL coordinator.
+scope:
+  domain: collection-network
+  boundedContext: inter-library-loan
+paradigm: tabular
+schema:
+  type: array
+  items:
+    type: object
+    required: [request-id, patron-id, isbn, status, lending-library-code]
+    properties:
+      request-id:
+        type: string
+      patron-id:
+        type: string
+      isbn:
+        type: string
+      status:
+        type: string
+      lending-library-code:
+        type: string
+      due-back-at:
+        type: string
+        format: date-time
+projections:
+  - boundedContext: inter-library-loan
+    aggregate: ill-request
+    event: ill-requested
+    rule: Insert row with request-id, patron-id, isbn, status requested.
+  - boundedContext: inter-library-loan
+    aggregate: ill-request
+    event: item-shipped
+    rule: Update status to shipped and set due-back-at.
+  - boundedContext: inter-library-loan
+    aggregate: ill-request
+    event: ill-completed
+    rule: Remove row for this request-id.
