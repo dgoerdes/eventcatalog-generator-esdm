@@ -206,29 +206,58 @@ export const mapQueryMessage = (query: BoundedContextContext['queries'][number],
   };
 };
 
-const resolveCommandOwnerId = (command: BoundedContextContext['commands'][number]) => {
-  if ('aggregate' in command.scope) {
-    return command.scope.aggregate;
-  }
+const messageRef = (id: string, version: string) => ({ id, version });
 
-  if ('dynamicConsistencyBoundary' in command.scope) {
-    return command.scope.dynamicConsistencyBoundary;
-  }
+const dedupeMessageRefs = (refs: Array<{ id: string; version: string }>) =>
+  Array.from(new Map(refs.map((ref) => [ref.id, ref])).values());
 
-  return undefined;
+const externalCallCommandId = (handlerName: string, externalSystem: string, index: number) =>
+  index === 0 ? `${handlerName}-invoke-${externalSystem}` : `${handlerName}-invoke-${externalSystem}-${index + 1}`;
+
+const mapExternalCallCommand = (
+  eventHandler: EsdmEventHandler,
+  effect: { type: 'external-call'; externalSystem: string; rule: string },
+  index: number,
+  version: string
+): MappedMessage => {
+  const id = externalCallCommandId(eventHandler.name, effect.externalSystem, index);
+  const summary = effect.rule.trim().split('\n')[0];
+
+  return {
+    id,
+    name: toTitle(`${eventHandler.name} → ${effect.externalSystem}`),
+    version,
+    type: 'command',
+    summary,
+    description: summary,
+    markdown: bodyMarkdown(
+      `\nIntegration command generated from ESDM event handler \`${eventHandler.name}\` external call to \`${effect.externalSystem}\`.\n`,
+      `\n${effect.rule.trim()}\n`
+    ),
+    ...kindBadgeFields('command'),
+  };
 };
 
-const resolveEventOwnerId = (event: EsdmEvent, context: BoundedContextContext) => {
-  if ('aggregate' in event.scope) {
-    return event.scope.aggregate;
+const findProcessManagerEmittedEvents = (
+  processManager: EsdmProcessManager,
+  domainName: string,
+  events: EsdmEvent[]
+): EsdmEvent[] => {
+  const prose = [
+    processManager.description ?? '',
+    ...processManager.reactions.map((reaction) => reaction.rule),
+  ].join('\n');
+
+  if (!/\b[Ee]mit(s|ted|ting)?\b/.test(prose)) {
+    return [];
   }
 
-  const publisher = context.commands.find((command) => command.publishes.includes(event.name));
-  if (publisher) {
-    return resolveCommandOwnerId(publisher);
-  }
-
-  return `${context.boundedContext.name}-events`;
+  return events.filter(
+    (event) =>
+      event.scope.domain === domainName &&
+      !('aggregate' in event.scope) &&
+      prose.includes(event.name)
+  );
 };
 
 const findSystemOverride = (overrides: SystemOverride[] | undefined, boundedContextName: string) =>
@@ -277,8 +306,8 @@ const mapAggregateService = (
     summary: aggregate.description,
     markdown,
     schema: aggregate.state,
-    sends: commandMessages.map((message) => ({ id: message.id, version })),
-    receives: eventMessages.map((message) => ({ id: message.id, version })),
+    sends: eventMessages.map((message) => messageRef(message.id, version)),
+    receives: commandMessages.map((message) => messageRef(message.id, version)),
     messages,
     ...kindBadgeFields('aggregate', aggregate.metadata?.labels),
     placement: 'system',
@@ -323,8 +352,8 @@ const mapDcbService = (
     version,
     summary: dcb.description,
     markdown,
-    sends: commandMessages.map((message) => ({ id: message.id, version })),
-    receives: eventMessages.map((message) => ({ id: message.id, version })),
+    sends: eventMessages.map((message) => messageRef(message.id, version)),
+    receives: commandMessages.map((message) => messageRef(message.id, version)),
     messages,
     ...kindBadgeFields('dynamic-consistency-boundary', dcb.metadata?.labels),
     placement: 'system',
@@ -371,8 +400,8 @@ const mapReadModelService = (
     summary: readModel.description,
     markdown,
     schema: readModel.schema,
-    sends: queryMessages.map((message) => ({ id: message.id, version })),
-    receives: eventMessages.map((message) => ({ id: message.id, version })),
+    sends: [],
+    receives: [...queryMessages, ...eventMessages].map((message) => messageRef(message.id, version)),
     messages,
     ...kindBadgeFields('read-model', readModel.metadata?.labels),
     placement: 'system',
@@ -421,66 +450,33 @@ const mapDomainServiceResource = (
   };
 };
 
-const mapOrphanEventsService = (
-  context: BoundedContextContext,
-  version: string,
-  assignedEventNames: Set<string>
-): MappedService | undefined => {
-  const orphanEvents = context.events.filter((event) => !assignedEventNames.has(event.name));
-  if (orphanEvents.length === 0) {
-    return undefined;
-  }
-
-  const serviceId = `${context.boundedContext.name}-events`;
-  const eventMessages = orphanEvents.map((event) => mapEventMessage(event, version));
-
-  return {
-    id: serviceId,
-    name: toTitle(`${context.boundedContext.name} Events`),
-    version,
-    summary: `Free-standing events in bounded context ${context.boundedContext.name}.`,
-    markdown: bodyMarkdown(
-      `\nGenerated from ESDM bounded-context-scoped events in \`${context.boundedContext.name}\`.\n`
-    ),
-    sends: [],
-    receives: eventMessages.map((message) => ({ id: message.id, version })),
-    messages: eventMessages,
-    ...kindBadgeFields('events'),
-    placement: 'system',
-    boundedContext: context.boundedContext.name,
-    esdmKind: 'aggregate',
-    sourceFiles: [],
-  };
-};
-
 const mapBoundedContextServices = (
   context: BoundedContextContext,
   version: string,
   unitOverrides?: ConsistencyUnitOverride[]
 ): MappedService[] => {
   const services: MappedService[] = [];
-  const assignedEventNames = new Set<string>();
 
   for (const aggregate of context.aggregates) {
-    const service = mapAggregateService(
-      context,
-      aggregate,
-      version,
-      findUnitOverride(unitOverrides, context.boundedContext.name, aggregate.name)
+    services.push(
+      mapAggregateService(
+        context,
+        aggregate,
+        version,
+        findUnitOverride(unitOverrides, context.boundedContext.name, aggregate.name)
+      )
     );
-    service.messages.filter((message) => message.type === 'event').forEach((message) => assignedEventNames.add(message.id));
-    services.push(service);
   }
 
   for (const dcb of context.dynamicConsistencyBoundaries) {
-    const service = mapDcbService(
-      context,
-      dcb,
-      version,
-      findUnitOverride(unitOverrides, context.boundedContext.name, dcb.name)
+    services.push(
+      mapDcbService(
+        context,
+        dcb,
+        version,
+        findUnitOverride(unitOverrides, context.boundedContext.name, dcb.name)
+      )
     );
-    service.messages.filter((message) => message.type === 'event').forEach((message) => assignedEventNames.add(message.id));
-    services.push(service);
   }
 
   for (const readModel of context.readModels) {
@@ -503,11 +499,6 @@ const mapBoundedContextServices = (
         findUnitOverride(unitOverrides, context.boundedContext.name, domainService.name)
       )
     );
-  }
-
-  const orphanService = mapOrphanEventsService(context, version, assignedEventNames);
-  if (orphanService) {
-    services.push(orphanService);
   }
 
   return services;
@@ -675,14 +666,22 @@ export const mapEventHandlerService = (
   eventHandler: EsdmEventHandler,
   version: string,
   override?: IntegrationOverride
-): MappedService => {
+): { service: MappedService; integrationCommands: MappedMessage[] } => {
   const serviceId = override?.id ?? eventHandler.name;
   const serviceName = override?.displayName ?? toTitle(eventHandler.name);
 
-  const receives = eventHandler.handles.map((reference) => ({
-    id: eventReferenceToMessageId(reference),
-    version,
-  }));
+  const receives = eventHandler.handles.map((reference) => messageRef(eventReferenceToMessageId(reference), version));
+
+  const integrationCommands: MappedMessage[] = [];
+  const sends: Array<{ id: string; version: string }> = [];
+
+  eventHandler.sideEffects.forEach((effect, index) => {
+    if (effect.type === 'external-call') {
+      const command = mapExternalCallCommand(eventHandler, effect, index, version);
+      integrationCommands.push(command);
+      sends.push(messageRef(command.id, version));
+    }
+  });
 
   const sideEffectLines = eventHandler.sideEffects.map((effect) => {
     if (effect.type === 'external-call') {
@@ -699,26 +698,31 @@ export const mapEventHandlerService = (
   );
 
   return {
-    id: serviceId,
-    name: serviceName,
-    version,
-    summary: eventHandler.description,
-    markdown,
-    sends: [],
-    receives,
-    messages: [],
-    ...kindBadgeFields('event-handler', eventHandler.metadata?.labels),
-    placement: 'domain',
-    esdmKind: 'event-handler',
-    draft: override?.draft,
-    owners: override?.owners,
-    sourceFiles: [],
+    service: {
+      id: serviceId,
+      name: serviceName,
+      version,
+      summary: eventHandler.description,
+      markdown,
+      sends,
+      receives,
+      messages: [],
+      ...kindBadgeFields('event-handler', eventHandler.metadata?.labels),
+      placement: 'domain',
+      esdmKind: 'event-handler',
+      draft: override?.draft,
+      owners: override?.owners,
+      sourceFiles: [],
+    },
+    integrationCommands,
   };
 };
 
 export const mapProcessManagerService = (
   processManager: EsdmProcessManager,
   version: string,
+  domainName: string,
+  domainEvents: EsdmEvent[],
   override?: IntegrationOverride
 ): { service: MappedService; flow: MappedFlow } => {
   const serviceId = override?.id ?? processManager.name;
@@ -729,16 +733,17 @@ export const mapProcessManagerService = (
     .filter((when): when is EsdmEventReference => 'event' in when);
   const handledEvents = [...processManager.startsWhen, ...reactionEvents];
 
-  const receives = handledEvents.map((reference) => ({
-    id: eventReferenceToMessageId(reference),
-    version,
-  }));
+  const receives = dedupeMessageRefs(
+    handledEvents.map((reference) => messageRef(eventReferenceToMessageId(reference), version))
+  );
 
   const emittedCommands = processManager.reactions.flatMap((reaction) => reaction.emits ?? []);
-  const sends = emittedCommands.map((reference) => ({
-    id: commandReferenceToMessageId(reference),
-    version,
-  }));
+  const emittedEvents = findProcessManagerEmittedEvents(processManager, domainName, domainEvents);
+
+  const sends = dedupeMessageRefs([
+    ...emittedCommands.map((reference) => messageRef(commandReferenceToMessageId(reference), version)),
+    ...emittedEvents.map((event) => messageRef(event.name, version)),
+  ]);
 
   const flowId = `${processManager.name}-flow`;
   const flowSteps = processManager.reactions.map((reaction, index) => {
@@ -804,6 +809,7 @@ export const mapProcessManagerService = (
 export const mapExternalSystemService = (
   externalSystem: EsdmExternalSystem,
   version: string,
+  receives: Array<{ id: string; version: string }>,
   override?: IntegrationOverride
 ): MappedService => {
   const serviceId = override?.id ?? externalSystem.name;
@@ -825,7 +831,7 @@ export const mapExternalSystemService = (
     summary: externalSystem.description,
     markdown,
     sends: [],
-    receives: [],
+    receives,
     messages: [],
     ...kindBadgeFields('external-system', externalSystem.metadata?.labels),
     externalSystem: true,
@@ -933,6 +939,8 @@ export const mapEsdmModel = (
 
   const integrationServices: MappedService[] = [];
   const flows: MappedFlow[] = [];
+  const integrationMessages: MappedMessage[] = [];
+  const externalReceives = new Map<string, Array<{ id: string; version: string }>>();
 
   for (const policy of filterDomainScoped(model.policies, esdmDomain.name)) {
     integrationServices.push(
@@ -941,15 +949,34 @@ export const mapEsdmModel = (
   }
 
   for (const eventHandler of filterDomainScoped(model.eventHandlers, esdmDomain.name)) {
-    integrationServices.push(
-      mapEventHandlerService(eventHandler, version, findIntegrationOverride(options?.integrationOverrides, eventHandler.name))
+    const mapped = mapEventHandlerService(
+      eventHandler,
+      version,
+      findIntegrationOverride(options?.integrationOverrides, eventHandler.name)
     );
+    integrationServices.push(mapped.service);
+    integrationMessages.push(...mapped.integrationCommands);
+
+    let externalCallIndex = 0;
+    for (const effect of eventHandler.sideEffects) {
+      if (effect.type !== 'external-call') {
+        continue;
+      }
+
+      const commandId = externalCallCommandId(eventHandler.name, effect.externalSystem, externalCallIndex);
+      externalCallIndex += 1;
+      const existing = externalReceives.get(effect.externalSystem) ?? [];
+      existing.push(messageRef(commandId, version));
+      externalReceives.set(effect.externalSystem, existing);
+    }
   }
 
   for (const processManager of filterDomainScoped(model.processManagers, esdmDomain.name)) {
     const mapped = mapProcessManagerService(
       processManager,
       version,
+      esdmDomain.name,
+      model.events,
       findIntegrationOverride(options?.integrationOverrides, processManager.name)
     );
     integrationServices.push(mapped.service);
@@ -961,6 +988,7 @@ export const mapEsdmModel = (
       mapExternalSystemService(
         externalSystem,
         version,
+        dedupeMessageRefs(externalReceives.get(externalSystem.name) ?? []),
         findIntegrationOverride(options?.integrationOverrides, externalSystem.name)
       )
     );
@@ -979,6 +1007,9 @@ export const mapEsdmModel = (
       messageMap.set(message.id, message);
     }
   }
+  for (const message of integrationMessages) {
+    messageMap.set(message.id, message);
+  }
 
   return {
     esdmDomain,
@@ -990,52 +1021,3 @@ export const mapEsdmModel = (
     messages: Array.from(messageMap.values()),
   };
 };
-
-// Backward-compatible exports used in tests
-export const mapBoundedContextService = (
-  context: BoundedContextContext,
-  version: string,
-  override?: SystemOverride
-): MappedService => {
-  const services = mapBoundedContextServices(context, version);
-  if (services.length === 1) {
-    const service = services[0];
-    if (override?.id) {
-      return { ...service, id: override.id };
-    }
-    if (override?.name) {
-      return { ...service, name: override.name };
-    }
-    return service;
-  }
-
-  // Legacy single-service expectation: merge all messages onto first aggregate service or first service
-  const primary =
-    services.find((service) => service.esdmKind === 'aggregate') ??
-    services.find((service) => service.esdmKind === 'read-model') ??
-    services[0];
-
-  const allMessages = services.flatMap((service) => service.messages);
-  const uniqueMessages = Array.from(new Map(allMessages.map((message) => [message.id, message])).values());
-  const commands = uniqueMessages.filter((message) => message.type === 'command');
-  const events = uniqueMessages.filter((message) => message.type === 'event');
-  const queries = uniqueMessages.filter((message) => message.type === 'query');
-
-  return {
-    ...primary,
-    id: override?.id ?? context.boundedContext.name,
-    name: override?.name ?? toTitle(context.boundedContext.name),
-    markdown: bodyMarkdown(
-      `\nGenerated from ESDM bounded context \`${context.boundedContext.name}\` in domain \`${context.domain.name}\`.\n`
-    ),
-    sends: commands.map((message) => ({ id: message.id, version })),
-    receives: [...events, ...queries].map((message) => ({ id: message.id, version })),
-    messages: uniqueMessages,
-    sidebarBadge: undefined,
-    esdmKind: 'aggregate',
-    draft: override?.draft,
-    owners: override?.owners,
-  };
-};
-
-export const findServiceOverride = findSystemOverride;

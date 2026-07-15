@@ -49,14 +49,6 @@ const optionsSchema = z.object({
       })
     )
     .optional(),
-  services: z
-    .array(
-      z.object({
-        boundedContext: z.string(),
-        ...overrideSchema.shape,
-      })
-    )
-    .optional(),
   units: z
     .array(
       z.object({
@@ -365,7 +357,7 @@ export default async function generator(_config: unknown, options: GeneratorOpti
     const model = await parseEsdmModel(modelConfig.path, modelConfig.headers);
     const esdmDomain = resolveDomain(model, validatedOptions.domain?.id);
     const defaultVersion = modelConfig.version ?? validatedOptions.domain?.version ?? '0.0.1';
-    const systemOverrides = validatedOptions.systems ?? validatedOptions.services;
+    const systemOverrides = validatedOptions.systems;
 
     if (debug) {
       console.log(

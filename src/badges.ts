@@ -72,11 +72,6 @@ export const KIND_BADGE_STYLES: Record<string, KindBadgeStyle> = {
     backgroundColor: '#4b5563',
     textColor: '#ffffff',
   },
-  events: {
-    label: 'Events',
-    backgroundColor: '#a34204',
-    textColor: '#ffffff',
-  },
 };
 
 const esdmLabelsToBadges = (labels?: Record<string, string>): MappedBadge[] | undefined => {

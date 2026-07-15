@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { escapeMdxLiterals, mapBoundedContextService, mapDomainUbiquitousLanguage, mapEsdmModel } from './mapper.js';
+import { escapeMdxLiterals, mapDomainUbiquitousLanguage, mapEsdmModel } from './mapper.js';
 import { groupBoundedContexts, parseEsdmModel, resolveDomain } from './parser.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -151,18 +151,49 @@ describe('mapper', () => {
     expect(catalogService?.markdown).not.toContain('## Schema');
   });
 
-  it('keeps backward-compatible bounded context service helper', async () => {
+  it('maps message flow directions for consistency units and integration services', async () => {
     const model = await parseEsdmModel(libraryFixture);
-    const domain = resolveDomain(model, 'public-library');
-    const context = groupBoundedContexts(model, domain).get('public-library/cataloging');
+    const mapped = mapEsdmModel(model, { id: 'public-library', name: 'Public Library', version: '1.0.0' });
 
-    expect(context).toBeDefined();
+    const book = mapped.services.find((service) => service.id === 'book');
+    expect(book?.sends.map((ref) => ref.id)).toContain('book-acquired');
+    expect(book?.receives.map((ref) => ref.id)).toContain('acquire-book');
+    expect(book?.sends.map((ref) => ref.id)).not.toContain('acquire-book');
 
-    const service = mapBoundedContextService(context!, '1.0.0');
+    const patronEnrollment = mapped.services.find((service) => service.id === 'patron-enrollment');
+    expect(patronEnrollment?.sends.map((ref) => ref.id)).toContain('patron-enrolled');
+    expect(patronEnrollment?.receives.map((ref) => ref.id)).toContain('enroll-patron');
 
-    expect(service.id).toBe('cataloging');
-    expect(service.messages.length).toBeGreaterThan(3);
-    expect(service.messages.some((message) => message.id === 'acquire-book')).toBe(true);
+    const catalog = mapped.services.find((service) => service.id === 'catalog');
+    expect(catalog?.sends).toEqual([]);
+    expect(catalog?.receives.map((ref) => ref.id)).toEqual(
+      expect.arrayContaining(['search-catalog', 'book-acquired'])
+    );
+
+    const policy = mapped.services.find((service) => service.id === 'sync-copy-on-checkout');
+    expect(policy?.receives.map((ref) => ref.id)).toContain('checked-out');
+    expect(policy?.sends.map((ref) => ref.id)).toContain('mark-copy-on-loan');
+
+    const welcomeHandler = mapped.services.find((service) => service.id === 'patron-welcome-email');
+    expect(welcomeHandler?.receives.map((ref) => ref.id)).toContain('patron-enrolled');
+    expect(welcomeHandler?.sends.map((ref) => ref.id)).toContain('patron-welcome-email-invoke-notification-service');
+
+    const notificationService = mapped.services.find((service) => service.id === 'notification-service');
+    expect(notificationService?.receives.map((ref) => ref.id)).toEqual(
+      expect.arrayContaining([
+        'patron-welcome-email-invoke-notification-service',
+        'due-date-reminder-email-invoke-notification-service',
+      ])
+    );
+
+    const loanReminder = mapped.services.find((service) => service.id === 'loan-reminder');
+    expect(loanReminder?.receives.map((ref) => ref.id)).toContain('checked-out');
+    expect(loanReminder?.sends.map((ref) => ref.id)).toContain('loan-reminder-due');
+
+    expect(mapped.services.some((service) => service.id.endsWith('-events'))).toBe(false);
+    expect(mapped.messages.some((message) => message.id === 'patron-welcome-email-invoke-notification-service')).toBe(
+      true
+    );
   });
 
   it('merges bounded-context ubiquitous language into the domain dictionary', async () => {

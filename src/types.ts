@@ -292,9 +292,6 @@ export interface SystemOverride {
   owners?: string[];
 }
 
-/** @deprecated Use systems[] for bounded-context overrides. Kept for backward compatibility. */
-export type ServiceOverride = SystemOverride;
-
 export interface ConsistencyUnitOverride {
   boundedContext: string;
   unit: string;
@@ -319,8 +316,6 @@ export interface GeneratorOptions {
   domain?: DomainConfig;
   /** Overrides for bounded-context → system mapping. */
   systems?: SystemOverride[];
-  /** @deprecated Alias for systems[]. */
-  services?: SystemOverride[];
   /** Overrides for consistency-unit → service mapping. */
   units?: ConsistencyUnitOverride[];
   /** Overrides for policies, event-handlers, process-managers, and external systems. */
