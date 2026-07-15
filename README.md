@@ -28,7 +28,7 @@ ESDM maps to EventCatalog 4.0. Bounded contexts become systems; consistency unit
 ## Installation
 
 ```bash
-npm install @dgoerdes/eventcatalog-generator-esdm
+npm install eventcatalog-generator-esdm
 ```
 
 ## Configuration
@@ -41,7 +41,7 @@ const path = require('path');
 module.exports = {
   generators: [
     [
-      '@dgoerdes/eventcatalog-generator-esdm',
+      'eventcatalog-generator-esdm',
       {
         models: [{ path: path.join(__dirname, 'models'), version: '1.0.0' }],
         domain: { id: 'my-domain', name: 'My Domain', version: '1.0.0' },

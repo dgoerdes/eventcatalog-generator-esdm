@@ -14,7 +14,7 @@
     "node": ">=22.12.0"
   },
   "dependencies": {
-    "@dgoerdes/eventcatalog-generator-esdm": "file:../..",
+    "eventcatalog-generator-esdm": "file:../..",
     "@eventcatalog/core": "latest"
   }
 }

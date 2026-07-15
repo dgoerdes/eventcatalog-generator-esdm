@@ -1,5 +1,5 @@
 {
-  "name": "@dgoerdes/eventcatalog-generator-esdm",
+  "name": "eventcatalog-generator-esdm",
   "version": "0.1.0",
   "description": "ESDM generator for EventCatalog",
   "type": "module",
@@ -16,9 +16,11 @@
   "files": [
     "dist",
     "package.json",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
+    "prepublishOnly": "npm run build && npm test",
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",

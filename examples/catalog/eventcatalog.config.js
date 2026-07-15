@@ -27,7 +27,7 @@ export default {
 
   generators: [
     [
-      '@dgoerdes/eventcatalog-generator-esdm',
+      'eventcatalog-generator-esdm',
       {
         models: [
           {
@@ -44,7 +44,7 @@ export default {
       },
     ],
     [
-      '@dgoerdes/eventcatalog-generator-esdm',
+      'eventcatalog-generator-esdm',
       {
         models: [
           {
