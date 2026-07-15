@@ -1,36 +1,29 @@
 # ESDM Generator for EventCatalog
 
-Generate [EventCatalog](https://www.eventcatalog.dev/) domains, systems, services, and messages from [ESDM](https://www.esdm.io/) (Event-Sourced Domain Modeling) YAML models.
+Generate [EventCatalog](https://www.eventcatalog.dev/) domains, systems, services, and messages from [ESDM](https://www.esdm.io/) YAML models.
 
-This is a one-way generator: ESDM `.esdm.yaml` files in, EventCatalog resources on disk out — the same model as the official OpenAPI and AsyncAPI plugins.
-
-## Scope
-
-**v0.1 is intentionally one-way.** ESDM → EventCatalog only. Bidirectional sync (write-back to ESDM) would require conflict resolution, round-trip fidelity for prose rules, and a much larger SDK surface (`rm`*, diffing, merge). That is a separate project.
+One-way generator: ESDM `.esdm.yaml` in → EventCatalog resources on disk out.
 
 ## Mapping
 
-ESDM's hierarchy maps to EventCatalog 4.0 systems and services:
+ESDM maps to EventCatalog 4.0. Bounded contexts become systems; consistency units inside them become services.
 
-| ESDM concept                         | EventCatalog resource      | Notes                                                          |
-| ------------------------------------ | -------------------------- | -------------------------------------------------------------- |
-| `domain`                             | Domain                     | Via config, validated against ESDM                             |
-| `bounded-context`                    | System                     | Grouped under the domain; owns consistency-unit services       |
-| `aggregate`                          | Service                    | Badge: `Aggregate`; owns scoped commands/events                |
-| `dynamic-consistency-boundary`       | Service                    | Badge: `DCB`; owns DCB commands and emitted BC events          |
-| `read-model`                         | Service                    | Badge: `Read Model`; owns queries and projected events         |
-| `domain-service`                     | Service                    | Badge: `Domain Service`; stateless domain operations           |
-| `command` / `event` / `query`        | Message                    | Owned by the matching consistency-unit service                 |
-| `external-system`                    | External service           | `externalSystem: true` at domain level                         |
-| `policy`                             | Integration service        | Badge: `Policy`; domain-scoped `handles` / `emits`             |
-| `event-handler`                      | Integration service        | Badge: `Event Handler`; side effects in markdown               |
-| `process-manager`                    | Integration service + Flow | Badge: `Process Manager`; flow documents reactions             |
-| `context-mapping`                    | System `relationships`     | BC-to-BC mappings; external endpoints noted in system markdown |
-| `actor`                              | System `actors`            | Mapped from BC-scoped actors                                   |
-| `bounded-context.ubiquitousLanguage` | Domain ubiquitous language | Merged across BCs; duplicate terms disambiguated with BC name  |
-| `metadata.labels`                    | Service `badges`           | Tag-like passthrough                                           |
-
-**Why bounded context → system?** EventCatalog systems describe software capabilities made of cooperating resources. ESDM bounded contexts are that layer — aggregates, DCBs, and read models are consistency units inside them, not deployable boundaries on their own.
+| ESDM concept                                   | EventCatalog resource      |
+| ---------------------------------------------- | -------------------------- |
+| `domain`                                       | Domain (via config)        |
+| `bounded-context`                              | System                     |
+| `aggregate`                                    | Service (`Aggregate`)      |
+| `dynamic-consistency-boundary`                 | Service (`DCB`)            |
+| `read-model`                                   | Service (`Read Model`)     |
+| `domain-service`                               | Service (`Domain Service`) |
+| `command` / `event` / `query`                  | Message                    |
+| `external-system`                              | External service           |
+| `policy` / `event-handler` / `process-manager` | Integration service        |
+| `process-manager`                              | + Flow                     |
+| `context-mapping`                              | System relationships       |
+| `actor`                                        | System actors              |
+| `bounded-context.ubiquitousLanguage`           | Domain ubiquitous language |
+| `metadata.labels`                              | Service badges             |
 
 ## Installation
 
@@ -46,37 +39,12 @@ Register the generator in `eventcatalog.config.js`:
 const path = require('path');
 
 module.exports = {
-  // ...catalog config
   generators: [
     [
       '@dgoerdes/eventcatalog-generator-esdm',
       {
-        models: [
-          {
-            path: path.join(__dirname, 'models/library'),
-            version: '1.0.0',
-          },
-        ],
-        domain: {
-          id: 'public-library',
-          name: 'Public Library',
-          version: '1.0.0',
-        },
-        systems: [
-          {
-            boundedContext: 'cataloging',
-            name: 'Cataloging',
-          },
-        ],
-        units: [
-          {
-            boundedContext: 'cataloging',
-            unit: 'book',
-            name: 'Book Aggregate',
-          },
-        ],
-        debug: true,
-        saveSourceFiles: true,
+        models: [{ path: path.join(__dirname, 'models'), version: '1.0.0' }],
+        domain: { id: 'my-domain', name: 'My Domain', version: '1.0.0' },
       },
     ],
   ],
@@ -85,57 +53,17 @@ module.exports = {
 
 ### Options
 
-| Option            | Description                                                                                                 |
-| ----------------- | ----------------------------------------------------------------------------------------------------------- |
-| `models`          | Array of ESDM model sources. `path` can be a directory (scans `**/*.esdm.yaml`), a single file, or a URL.   |
-| `domain`          | EventCatalog domain to group generated systems under. `id` should match the ESDM domain name when possible. |
-| `systems`         | Optional per–bounded-context overrides for system `id`, `name`, `version`, `owners`, `draft`.               |
-| `units`           | Optional per–consistency-unit overrides (`boundedContext` + `unit` name).                                   |
-| `integration`     | Optional overrides for policies, event-handlers, process-managers, and external systems.                    |
-| `debug`           | Verbose logging. Also enabled via `npm run generate -- debug`.                                              |
-| `saveSourceFiles` | Attach source `.esdm.yaml` files to each generated service (default: `true`).                               |
+| Option            | Description                                                          |
+| ----------------- | -------------------------------------------------------------------- |
+| `models`          | ESDM sources — directory, file, or URL (`**/*.esdm.yaml`)            |
+| `domain`          | EventCatalog domain for generated systems                            |
+| `systems`         | Per–bounded-context overrides (`id`, `name`, `version`, …)           |
+| `units`           | Per–consistency-unit overrides (`boundedContext` + `unit`)           |
+| `integration`     | Overrides for policies, handlers, process managers, external systems |
+| `debug`           | Verbose logging (`npm run generate -- debug`)                        |
+| `saveSourceFiles` | Attach source `.esdm.yaml` to services (default: `true`)             |
 
-## Generate
-
-From your EventCatalog project:
-
-```bash
-npm run generate
-# or with debug output
-npm run generate -- debug
-```
-
-## Try it locally (EventCatalog CE)
-
-This repo includes a runnable EventCatalog Community Edition project under `examples/catalog/`. It uses the local plugin via `file:../..` and the Library Network ESDM model as a real-world example.
-
-```bash
-npm install
-npm run catalog:demo
-```
-
-Open [http://localhost:3000](http://localhost:3000) — you should see the **Public Library** and **Collection Network** domains with their bounded-context systems, consistency-unit services, integration services, and external systems.
-
-**Requires Node.js >= 22.12.0** (current EventCatalog / Astro requirement).
-
-See [examples/catalog/README.md](examples/catalog/README.md) for step-by-step commands.
-
-## Development
-
-```bash
-npm install
-npm test
-npm run build
-npm run esdm:lint
-```
-
-The `examples/catalog/models/library` directory contains the Library Network example model. Lint it with the bundled ESDM CLI in `esdm/`:
-
-```bash
-npm run esdm:lint
-# or directly:
-./esdm/esdm lint -d examples/catalog/models/library
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) to run the example catalog locally.
 
 ## License
 
