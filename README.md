@@ -27,6 +27,7 @@ ESDM's hierarchy maps to EventCatalog 4.0 systems and services:
 | `process-manager`              | Integration service + Flow | Badge: `Process Manager`; flow documents reactions             |
 | `context-mapping`              | System `relationships`     | BC-to-BC mappings; external endpoints noted in system markdown |
 | `actor`                        | System `actors`            | Mapped from BC-scoped actors                                   |
+| `bounded-context.ubiquitousLanguage` | Domain ubiquitous language | Merged across BCs; duplicate terms disambiguated with BC name |
 | `metadata.labels`              | Service `badges`           | Tag-like passthrough                                           |
 
 **Why bounded context → system?** EventCatalog systems describe software capabilities made of cooperating resources. ESDM bounded contexts are that layer — aggregates, DCBs, and read models are consistency units inside them, not deployable boundaries on their own.

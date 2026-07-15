@@ -457,9 +457,17 @@ export interface MappedDomain {
   badges?: MappedBadge[];
 }
 
+export interface MappedUbiquitousLanguageTerm {
+  id: string;
+  name: string;
+  summary: string;
+  description?: string;
+}
+
 export interface MappedModel {
   esdmDomain: EsdmDomain;
   domain: MappedDomain;
+  ubiquitousLanguage: MappedUbiquitousLanguageTerm[];
   systems: MappedSystem[];
   services: MappedService[];
   flows: MappedFlow[];

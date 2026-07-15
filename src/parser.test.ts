@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { escapeMdxLiterals, mapBoundedContextService, mapEsdmModel } from './mapper.js';
+import { escapeMdxLiterals, mapBoundedContextService, mapDomainUbiquitousLanguage, mapEsdmModel } from './mapper.js';
 import { groupBoundedContexts, parseEsdmModel, resolveDomain } from './parser.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -152,5 +152,92 @@ describe('mapper', () => {
     expect(service.id).toBe('cataloging');
     expect(service.messages.length).toBeGreaterThan(3);
     expect(service.messages.some((message) => message.id === 'acquire-book')).toBe(true);
+  });
+
+  it('merges bounded-context ubiquitous language into the domain dictionary', async () => {
+    const model = await parseEsdmModel(libraryFixture);
+    const mapped = mapEsdmModel(model, { id: 'public-library', name: 'Public Library', version: '1.0.0' });
+
+    expect(mapped.ubiquitousLanguage.map((term) => term.name).sort()).toEqual([
+      'Copy',
+      'Hold',
+      'Loan',
+      'Loan limit',
+      'Patron',
+      'Renewal',
+      'Suspension (Circulation)',
+      'Suspension (Membership)',
+      'Title',
+      'Withdraw',
+    ]);
+
+    const membershipSuspension = mapped.ubiquitousLanguage.find((term) => term.name === 'Suspension (Membership)');
+    const circulationSuspension = mapped.ubiquitousLanguage.find((term) => term.name === 'Suspension (Circulation)');
+
+    expect(membershipSuspension?.id).toBe('suspension-membership');
+    expect(membershipSuspension?.summary).toContain('borrowing');
+    expect(circulationSuspension?.id).toBe('suspension-circulation');
+    expect(circulationSuspension?.summary).toContain('copy');
+    expect(circulationSuspension?.description).toContain('**Avoid:**');
+
+    const title = mapped.ubiquitousLanguage.find((term) => term.name === 'Title');
+    expect(title?.id).toBe('title');
+    expect(title?.summary).toContain('ISBN');
+    expect(title?.description).toContain('**Avoid:**');
+    expect(title?.description).toContain('Book');
+  });
+
+  it('disambiguates duplicate ubiquitous language terms with bounded-context names', () => {
+    const domain = {
+      apiVersion: 'schema.esdm.io/core/v1',
+      kind: 'domain' as const,
+      name: 'demo',
+    };
+    const contexts = [
+      {
+        domain,
+        boundedContext: {
+          apiVersion: 'schema.esdm.io/core/v1',
+          kind: 'bounded-context' as const,
+          name: 'membership',
+          scope: { domain: 'demo' },
+          ubiquitousLanguage: [{ term: 'Suspension', definition: 'Membership suspension policy.' }],
+        },
+        aggregates: [],
+        dynamicConsistencyBoundaries: [],
+        readModels: [],
+        domainServices: [],
+        commands: [],
+        events: [],
+        queries: [],
+        actors: [],
+      },
+      {
+        domain,
+        boundedContext: {
+          apiVersion: 'schema.esdm.io/core/v1',
+          kind: 'bounded-context' as const,
+          name: 'circulation',
+          scope: { domain: 'demo' },
+          ubiquitousLanguage: [{ term: 'Suspension', definition: 'Circulation suspension for overdue items.' }],
+        },
+        aggregates: [],
+        dynamicConsistencyBoundaries: [],
+        readModels: [],
+        domainServices: [],
+        commands: [],
+        events: [],
+        queries: [],
+        actors: [],
+      },
+    ];
+
+    const terms = mapDomainUbiquitousLanguage(contexts);
+
+    expect(terms.map((term) => term.name).sort()).toEqual([
+      'Suspension (Circulation)',
+      'Suspension (Membership)',
+    ]);
+    expect(terms.map((term) => term.id).sort()).toEqual(['suspension-circulation', 'suspension-membership']);
   });
 });

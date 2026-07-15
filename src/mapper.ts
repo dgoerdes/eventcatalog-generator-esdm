@@ -7,6 +7,7 @@ import type {
   EsdmAggregate,
   EsdmCommandReference,
   EsdmContextMapping,
+  EsdmBoundedContext,
   EsdmDomain,
   EsdmDomainService,
   EsdmDynamicConsistencyBoundary,
@@ -24,6 +25,7 @@ import type {
   MappedMessage,
   MappedModel,
   MappedService,
+  MappedUbiquitousLanguageTerm,
   MappedSystem,
   MappedSystemActor,
   MappedSystemRelationship,
@@ -38,6 +40,60 @@ const toTitle = (value: string) =>
     .split(/[-_]/)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+
+type EsdmUbiquitousLanguageEntry = NonNullable<EsdmBoundedContext['ubiquitousLanguage']>[number];
+
+const slugifyTerm = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/gi, '-')
+    .replace(/^-+|-+$/g, '');
+
+const formatUbiquitousLanguageDescription = (entry: EsdmUbiquitousLanguageEntry) => {
+  const lines = [entry.definition.trim()];
+
+  if (entry.avoid?.length) {
+    const avoidLines = entry.avoid.map(
+      (item) => `- **${item.term}**${item.reason ? ` — ${item.reason}` : ''}`
+    );
+    lines.push('', '**Avoid:**', ...avoidLines);
+  }
+
+  return lines.join('\n');
+};
+
+export const mapDomainUbiquitousLanguage = (
+  contexts: Iterable<BoundedContextContext>
+): MappedUbiquitousLanguageTerm[] => {
+  const collected: Array<{ boundedContext: string; entry: EsdmUbiquitousLanguageEntry }> = [];
+
+  for (const context of contexts) {
+    for (const entry of context.boundedContext.ubiquitousLanguage ?? []) {
+      collected.push({ boundedContext: context.boundedContext.name, entry });
+    }
+  }
+
+  const termCounts = new Map<string, number>();
+  for (const { entry } of collected) {
+    const key = entry.term.toLowerCase();
+    termCounts.set(key, (termCounts.get(key) ?? 0) + 1);
+  }
+
+  return collected.map(({ boundedContext, entry }) => {
+    const duplicated = (termCounts.get(entry.term.toLowerCase()) ?? 0) > 1;
+    const name = duplicated ? `${entry.term} (${toTitle(boundedContext)})` : entry.term;
+    const id = slugifyTerm(duplicated ? `${entry.term} ${boundedContext}` : entry.term);
+    const description = formatUbiquitousLanguageDescription(entry);
+
+    return {
+      id,
+      name,
+      summary: entry.definition.trim(),
+      ...(description !== entry.definition.trim() ? { description } : {}),
+    };
+  });
+};
 
 const renderRules = (title: string, rules?: Array<{ name: string; rule?: string; condition?: string }>) => {
   if (!rules || rules.length === 0) {
@@ -918,6 +974,7 @@ export const mapEsdmModel = (
   return {
     esdmDomain,
     domain,
+    ubiquitousLanguage: mapDomainUbiquitousLanguage(contexts.values()),
     systems,
     services: [...systemServices, ...integrationServices],
     flows,

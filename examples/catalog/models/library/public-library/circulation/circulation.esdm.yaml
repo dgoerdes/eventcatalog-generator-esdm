@@ -13,3 +13,10 @@ ubiquitousLanguage:
     definition: A patron reservation queue entry for a title; fulfilled when a copy becomes available.
   - term: Renewal
     definition: Extension of a loan due date when no holds are waiting and renewal quota allows.
+  - term: Suspension
+    definition: >
+      Administrative pause on a copy's circulation — the item cannot be checked out or renewed
+      until the suspension is lifted (e.g. recall for hold fulfillment, transfer for repair).
+    avoid:
+      - term: Patron suspension
+        reason: Suspension here applies to a copy, not the patron's borrowing privileges (see membership).

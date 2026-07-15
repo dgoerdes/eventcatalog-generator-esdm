@@ -350,6 +350,7 @@ export default async function generator(_config: unknown, options: GeneratorOpti
     addSystemToDomain,
     addServiceToDomain,
     addServiceToSystem,
+    addUbiquitousLanguageToDomain,
     getDomain,
     versionDomain,
     getResourcePath,
@@ -402,6 +403,17 @@ export default async function generator(_config: unknown, options: GeneratorOpti
 
     await writeDomainResource(sdk, mapped.domain, domainPath);
     console.log(chalk.cyan(` - Domain (v${domainVersion}) created`));
+
+    if (mapped.ubiquitousLanguage.length > 0) {
+      await addUbiquitousLanguageToDomain(
+        domainId,
+        { dictionary: mapped.ubiquitousLanguage },
+        domainVersion
+      );
+      console.log(
+        chalk.cyan(` - Ubiquitous language (${mapped.ubiquitousLanguage.length} term(s)) added`)
+      );
+    }
 
     for (const systemRef of mapped.domain.systems) {
       await addSystemToDomain(domainId, systemRef, domainVersion);
