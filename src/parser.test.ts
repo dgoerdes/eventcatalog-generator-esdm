@@ -102,6 +102,17 @@ describe('mapper', () => {
     );
   });
 
+  it('includes system and resource diagrams in domain markdown', async () => {
+    const model = await parseEsdmModel(libraryFixture);
+    const mapped = mapEsdmModel(model, { id: 'public-library', name: 'Public Library', version: '1.0.0' });
+
+    expect(mapped.domain.markdown).toContain('## System Diagram');
+    expect(mapped.domain.markdown).toContain('<ContextDiagram />');
+    expect(mapped.domain.markdown).toContain('## Resource Diagram');
+    expect(mapped.domain.markdown).toContain('<NodeGraph />');
+    expect(mapped.domain.markdown).not.toContain(mapped.domain.summary!.trim().slice(0, 40));
+  });
+
   it('does not duplicate name or summary in resource markdown bodies', async () => {
     const model = await parseEsdmModel(libraryFixture);
     const mapped = mapEsdmModel(model, { id: 'public-library', name: 'Public Library', version: '1.0.0' });

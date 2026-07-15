@@ -837,6 +837,12 @@ export const mapExternalSystemService = (
   };
 };
 
+const domainDiagramMarkdown = () =>
+  bodyMarkdown(
+    `\n## System Diagram\n\nThe systems in this domain, how they relate, and the people who interact with them.\n\n<ContextDiagram />\n`,
+    `\n## Resource Diagram\n\nThe components that make up this domain.\n\n<NodeGraph />\n`
+  );
+
 export const mapDomain = (
   domainConfig: DomainConfig,
   systems: Array<{ id: string; version: string }>,
@@ -848,7 +854,10 @@ export const mapDomain = (
     name: domainConfig.name,
     version: domainConfig.version,
     summary: esdmDomain.description ?? domainConfig.name,
-    markdown: bodyMarkdown(`\nGenerated from ESDM domain \`${esdmDomain.name}\`.\n`),
+    markdown: bodyMarkdown(
+      domainDiagramMarkdown(),
+      `\nGenerated from ESDM domain \`${esdmDomain.name}\`.\n`
+    ),
     draft: domainConfig.draft,
     owners: domainConfig.owners,
     systems,
